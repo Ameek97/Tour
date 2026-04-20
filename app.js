@@ -20,8 +20,8 @@ app.use("/api/tour",tourRouter);
 
 
 
-app.all('*', (req,res,next)=>{
-      next(new appError("Not a valid route",404));
+app.use((req, res, next) => {
+  next(new appError("Not a valid route", 404));
 });
 
 app.use(errorControl);

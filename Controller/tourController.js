@@ -1,4 +1,3 @@
-const { route } = require('../Routes/tourRoutes');
 const Tour= require('./../model/tourModel');
 const APIfeatures= require(`./../Utils/APIfeatures`);
  
@@ -31,7 +30,7 @@ try{
 
 
 
-exports.postTour= async (req,res)=>{
+exports.postTour= async (req,res,next)=>{
 try{
 const newTour= await Tour.create(req.body);
 res
@@ -45,6 +44,30 @@ res
 }
 catch(err){
   next(err); }
+}
+
+exports.tourByID= async (req,res,next)=>{
+  try{
+    // TODO: implement get tour by ID
+    res.status(200).json({
+      status: 'success',
+      data: { tour: 'placeholder' }
+    });
+  } catch(err){
+    next(err);
+  }
+}
+
+exports.deleteTour= async (req,res,next)=>{
+  try{
+    // TODO: implement delete tour
+    res.status(200).json({
+      status: 'success',
+      message: 'Tour deleted (placeholder)'
+    });
+  } catch(err){
+    next(err);
+  }
 }
 
 
