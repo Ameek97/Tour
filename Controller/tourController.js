@@ -3,7 +3,7 @@ const Tour= require('./../model/tourModel');
 const APIfeatures= require(`./../Utils/APIfeatures`);
  
 
-exports.getAllTours= async(req,res)=>{
+exports.getAllTours= async(req,res,next)=>{
 try{
 
    const query=Tour.find();
@@ -25,11 +25,7 @@ try{
         data:{tours} 
           })
  }catch(err){ 
-       res 
-        .status(400)
-        .json({
-            Status:"fail",
-            Message:"error occured"})
+      next(err);
     }
 }
 
@@ -48,13 +44,7 @@ res
   });
 }
 catch(err){
-  console.log(err.message);
-  res
-     .status(400)
-     .json({
-        Status:"Fail",
-        Message:err.message
-     })      }
+  next(err); }
 }
 
 
@@ -70,11 +60,7 @@ exports.tourByID= async (req,res)=>{
           })
           
      }catch(err){ 
-       res 
-        .status(400)
-        .json({
-            Status:"fail",
-            Message:"error occured"})
+        next(err);
     }
 }
 
@@ -89,13 +75,7 @@ res
     message:`record succesfully deleted`
    })
 } catch(err){
-     
-     res
-     .status(404)
-     .json({
-      status:`error`,
-      message:err.message 
-     })
+     next(err);
 }}
 
 
