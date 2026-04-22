@@ -10,7 +10,7 @@ const port=3000;
 
 
 const tourRouter=require(`./Routes/tourRoutes`);
-const userRouter = require('./Routes/userRoute');
+const userRouter = require('./Routes/userRoutes');
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));

@@ -11,6 +11,9 @@
     "start": "nodemon app.js"
   },
   "dependencies": {
-    "express": "^5.2.1"
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mongoose": "^9.5.0",
+    "validator": "^13.15.35"
   }
 }
