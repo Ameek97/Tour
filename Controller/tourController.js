@@ -1,4 +1,4 @@
-const Tour= require('./../model/tourModel');
+const Tour= require('../model/tourModel.js');
 const APIfeatures= require(`./../Utils/APIfeatures`);
  
 

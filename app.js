@@ -10,13 +10,15 @@ const port=3000;
 
 
 const tourRouter=require(`./Routes/tourRoutes`);
+const userRouter = require('./Routes/userRoute');
+
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.set('query parser', 'extended'); 
 
 app.use("/api/tour",tourRouter);
-
+app.use(`/api/user`,userRouter);
 
 
 
