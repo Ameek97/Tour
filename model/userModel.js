@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const validator= require(`validator`);
+const bcrypt= require(`bcryptjs`);
 
 const userSchema = new mongoose.Schema({
     name: {
@@ -30,9 +31,23 @@ const userSchema = new mongoose.Schema({
             return el==this.password;
          },
          message:"The confirmed password does not match"
-        }
+         }
     }
-}, );
+}, 
+
+);
+
+// mongoose middlewear schema doesent use any next() fucntion now
+// works only for create or save
+userSchema.pre('save', async function() {
+    if (!this.isModified('password')){return };
+
+    // hashing the password 
+    this.password = await bcrypt.hash(this.password, 12);
+    this.passwordConfirm = undefined;
+
+});
+
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;
