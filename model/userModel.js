@@ -25,8 +25,14 @@ const userSchema = new mongoose.Schema({
     passwordConfirm: {
         type: String,
         required: [true, 'Please confirm your password'],
+        validate:{
+         validator:function(el){
+            return el==this.password;
+         },
+         message:"The confirmed password does not match"
+        }
     }
-}, { timestamps: true });
+}, );
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;
