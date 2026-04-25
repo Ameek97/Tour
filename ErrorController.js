@@ -16,16 +16,18 @@ module.exports=(err,req,res,next)=>{
     // client will see the errors
 }  else if(process.env.NODE_ENV=="production"){
     
+    
     let error={...err};
 
     if(error.code==11000){error= new AppError("dublicate name",400);}
 
     // error due to client 
-    if(error.isOperational==true){
+    if(err.isOperational==true){
         
-        res.status(error.statusCode).json({
-        status:error.status,
-        message:error.message            
+        
+        res.status(err.statusCode).json({
+        status:err.status,
+        message:err.message            
         })}  else {  // error in program
 
             console.error('ERROR 💥', err);

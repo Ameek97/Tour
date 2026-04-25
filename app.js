@@ -30,9 +30,7 @@ app.use(errorControl);
 
 app.listen(port,()=>{
     console.log(`app running on port ${port}`);
-    console.log(process.env.JWD_KEY);
-    console.log(process.env.NODE_ENV);
-    console.log(process.env.NAAV);
+    
     
 });
 

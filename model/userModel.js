@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const validator= require(`validator`);
 const bcrypt= require(`bcryptjs`);
 
+
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -47,6 +48,14 @@ userSchema.pre('save', async function() {
     this.passwordConfirm = undefined;
 
 });
+
+// schema method doesent use the arrow fucntion
+userSchema.methods.correctPassword= async function(p1,p2){
+   console.log(p1);
+   console.log(p2);
+   console.log(bcrypt.compare(p1,p2));
+   return bcrypt.compare(p1,p2);
+};
 
 
 const User = mongoose.model('User', userSchema);
