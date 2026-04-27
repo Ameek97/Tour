@@ -83,6 +83,8 @@ tourSchema.pre(`find`,function(){
     //  this.sort(`price`);
 });
 
+
+
 const Tour=mongoose.model('Tour',tourSchema);
 
 

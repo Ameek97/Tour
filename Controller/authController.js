@@ -18,9 +18,6 @@ exports.signup= async (req,res,next)=>{
     try{
      const newUser = await User.create(req.body);
 
-   
-
-     
      const token = jwt.sign(
 
         { id: newUser._id },
@@ -92,10 +89,21 @@ if(!token){return next(new AppError("Request denied you were not logged in",401)
  console.log(decoded);
 
 
-// 3) check if the token has expired
 
 
- // check if the user still exists
+ // 3) check if the user still exists
+
+   const newUser= await User.findById(decoded.id);
+
+   if(!newUser){return next(new AppError("The user this token belongs to no longer exists.",401));}
+
+
+ // 4) check if the password was changed after the token was issued
+
+  // model instance function 
+  if(newUser.changedPasswordAfter(decoded.iat)){
+   return next(new AppError("The password was changed after the token was issued, please login again.",401));}
+
 
 
 next();

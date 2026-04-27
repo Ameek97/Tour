@@ -33,7 +33,9 @@ const userSchema = new mongoose.Schema({
          },
          message:"The confirmed password does not match"
          }
-    }
+    },
+
+    passwordChangedAt: Date
 }, 
 
 );
@@ -55,6 +57,17 @@ userSchema.methods.correctPassword= async function(p1,p2){
    console.log(p2);
    return bcrypt.compare(p1,p2);
 };
+
+
+userSchema.methods.changedPasswordAfter= function(iat){
+
+ if(this.passwordChangedAt){
+  const changedTimeStamp= parseInt(this.passwordChangedAt.getTime()/1000,10);
+
+    return changedTimeStamp > iat;
+ }
+  return false;
+}
 
 
 const User = mongoose.model('User', userSchema);
