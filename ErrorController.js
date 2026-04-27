@@ -21,6 +21,7 @@ module.exports=(err,req,res,next)=>{
 
     if(error.code==11000){error= new AppError("dublicate name",400);}
     if(error.name=="JsonWebTokenError"){error= new AppError("Login failed(incorrect token), please login again",401);}
+    if(error.name=="TokenExpiredError"){error= new AppError("The token has expired, please login again",401);}
 
     // error due to client 
     if(error.isOperational==true){

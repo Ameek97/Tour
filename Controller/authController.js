@@ -7,7 +7,7 @@ const {promisify}= require('util');
 const createToken = id=>{
     return jwt.sign({ id },
         process.env.JWT_KEY,
-        { expiresIn: "5d",
+        { expiresIn: process.env.JWT_EXP,
           iat:Date
          })
 }
@@ -20,12 +20,14 @@ exports.signup= async (req,res,next)=>{
 
    
 
-     console.log(process.env.JWT_KEY);
+     
      const token = jwt.sign(
 
         { id: newUser._id },
         process.env.JWT_KEY,
-        { expiresIn: "5d" }
+        { expiresIn: process.env.JWT_EXP,
+          
+         }
      );
 
 
@@ -86,6 +88,14 @@ if(!token){return next(new AppError("Request denied you were not logged in",401)
 
  // verifies the token and as we promisify, it returns the token json
  const decoded=await promisify(jwt.verify)(token,process.env.JWT_KEY);
+
+ console.log(decoded);
+
+
+// 3) check if the token has expired
+
+
+ // check if the user still exists
 
 
 next();
