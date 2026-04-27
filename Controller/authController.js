@@ -1,11 +1,14 @@
 const User = require('../model/userModel');
 const jwt= require(`jsonwebtoken`);
 const AppError = require('./../appError');
+const {promisify}= require('util');
 
 const createToken = id=>{
     return jwt.sign({ id },
         "this-is-a-very-secure-key",
-        { expiresIn: "5d" })
+        { expiresIn: "5d",
+          iat:Date
+         })
 }
 
 
@@ -14,8 +17,7 @@ exports.signup= async (req,res,next)=>{
     try{
      const newUser = await User.create(req.body);
 
-     console.log(process.env.JWT_KEY);
-     console.log(process.env.NODE_ENV);
+   
 
      const token = jwt.sign(
 
@@ -61,5 +63,29 @@ if(!user || !(await user.correctPassword(password, user.password))){
 }
 
 catch(err){next(err);}
+
+}
+
+
+exports.protect= async (req,res, next)=>{
+
+// 1)check if the token was sent
+let token; 
+
+if(req.headers.authorization  && req.headers.authorization.startsWith("Bearer")){
+  token = req.headers.authorization.split(' ')[1];
+}
+
+// if no token was sent
+if(!token){return next(new AppError("Request denied you were not logged in",401));}
+
+
+// 2) verify the token
+
+ // verifies the token and as we promisify, it returns the token json
+ const newUser=await promisify(jwt.verify)(token,process.env.JWT_KEY);
+
+
+next();
 
 }

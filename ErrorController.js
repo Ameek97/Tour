@@ -17,24 +17,25 @@ module.exports=(err,req,res,next)=>{
 }  else if(process.env.NODE_ENV=="production"){
     
     
-    let error={...err};
+    let error=err;
 
     if(error.code==11000){error= new AppError("dublicate name",400);}
+    if(error.name=="JsonWebTokenError"){error= new AppError("Login failed(incorrect token), please login again",401);}
 
     // error due to client 
-    if(err.isOperational==true){
+    if(error.isOperational==true){
         
         
-        res.status(err.statusCode).json({
-        status:err.status,
-        message:err.message            
+        res.status(error.statusCode).json({
+        status:error.status,
+        message:error.message            
         })}  else {  // error in program
 
             console.error('ERROR 💥', err);
 
             res.status(500).json({
             status:'error',
-            message: err.message
+            message: error.message
             });}}
 }
 
