@@ -15,7 +15,7 @@ Router
 
 Router
      .route(`/delete/:id`)    
-     .delete(tourController.deleteTour)
+     .delete(authController.protect,authController.restrictTo("admin","lead guide"),tourController.deleteTour)
 
 
 

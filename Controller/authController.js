@@ -8,7 +8,7 @@ const createToken = id=>{
     return jwt.sign({ id },
         process.env.JWT_KEY,
         { expiresIn: process.env.JWT_EXP,
-          iat:Date
+          
          })
 }
 
@@ -101,7 +101,27 @@ if(!token){return next(new AppError("Request denied you were not logged in",401)
   if(newUser.changedPasswordAfter(decoded.iat)){
    return next(new AppError("The password was changed after the token was issued, please login again.",401));}
 
-req.user=newUser;
+req.user=newUser; // just the token may have been provided, req.user could have been nothing 
+
+// if next was reached means that token was authorised
 next();
 
 }
+
+// Authorisation function based on role in schema, 
+// if the role is not allowed than an error is sent and next() is not reached
+
+/* you cant add argument to a middlewear fucntion, 
+  so we do this instead.
+  note- (req,res,next) arent considered as as arguments here,  */
+
+exports.restrictTo= (...roles)=>{//here roles is an array of arguments that we passed 
+  return (req,res,next)=>{
+
+   // here req.user we created in private fucntion above this 
+   if(!roles.includes(req.user.role)){return next(new AppError("You are not authorised to this.",403));}
+
+    // you have authority
+    next();
+  }
+};
