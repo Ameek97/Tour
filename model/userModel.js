@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const validator= require(`validator`);
 const bcrypt= require(`bcryptjs`);
-
+const crypto = require(`crypto`);
 
 const userSchema = new mongoose.Schema({
 
@@ -42,7 +42,9 @@ const userSchema = new mongoose.Schema({
          }
     },
 
-    passwordChangedAt: Date
+    passwordChangedAt: Date,
+    passwordResetToken= string,
+    passwordTokenExpire= Date
 }, 
 
 );
@@ -60,8 +62,7 @@ userSchema.pre('save', async function() {
 
 // schema method doesent use the arrow fucntion
 userSchema.methods.correctPassword= async function(p1,p2){
-   console.log(p1);
-   console.log(p2);
+
    return bcrypt.compare(p1,p2);
 };
 
@@ -74,6 +75,22 @@ userSchema.methods.changedPasswordAfter= function(iat){
     return changedTimeStamp > iat;
  }
   return false;
+}
+
+
+userSchema.methods.createPasswordResetToken=function(){
+
+    // creates a random reset token to be sent to user
+    const resetToken= crypto().randomBytes(32).toString("hex");
+
+    // creates an encrypted version of the reset token to be stored in the db,
+    // we store this so we can compare during password reset 
+    this.passwordResetToken= crypto
+                                   .createHash(`sha256`)
+                                   .update(resetToken)
+                                   .digest(`hex`);
+    this.passwordTokenExpire= Date.now() + 10*60*1000; 
+   return resetToken; 
 }
 
 
