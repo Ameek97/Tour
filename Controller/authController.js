@@ -88,9 +88,6 @@ if(!token){return next(new AppError("Request denied you were not logged in",401)
 
  console.log(decoded);
 
-
-
-
  // 3) check if the user still exists
 
    const newUser= await User.findById(decoded.id);
@@ -104,8 +101,7 @@ if(!token){return next(new AppError("Request denied you were not logged in",401)
   if(newUser.changedPasswordAfter(decoded.iat)){
    return next(new AppError("The password was changed after the token was issued, please login again.",401));}
 
-
-
+req.user=newUser;
 next();
 
 }
