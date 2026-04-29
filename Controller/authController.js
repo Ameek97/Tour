@@ -130,8 +130,11 @@ try{
 exports.forgotPassword= async (req,res, next)=>{
 
  try{ 
+// check if email was sent
+if(!req.body.email){return next(new AppError("provide an email",401));}
+
 // 1) check if the email sent by the user exists
-const user= await user.findOne(req.body.email);
+const user= await User.findOne({email:req.body.email});
 
 if(!user){return next(new AppError("No such email exists"));}
 
@@ -142,7 +145,7 @@ const resetToken= user.createPasswordResetToken();
  await user.save({validateBeforeSave:false});
 
  // we set the url/route of the reset password function
- const url=`${req.protocol}//${req.get('host')}/api/user/resetPassword/${resetToken}`;
+  const url=`${req.protocol}://${req.get('host')}/api/user/resetPassword/${resetToken}`;
 
  const message= `Want to reset your password? Click on the link ${url} to reset, else 
   ignore this email.`;
@@ -151,9 +154,10 @@ const resetToken= user.createPasswordResetToken();
 
 try{
 
- sendMail(user.email,
+await sendMail({
+          email:user.email,
           subject,
-          message);
+          message});
 
  res.status(200)
     .json({
@@ -162,10 +166,10 @@ try{
     })         
 } catch(err){
 
-  this.passwordResetToken=undefined;
-  this.passwordTokenExpire=undefined;
+  user.passwordResetToken=undefined;
+  user.passwordTokenExpire=undefined;
   await user.save({validateBeforeSave:false}); 
-  return next(new AppError("An error has occured in sending the email, please try again"),500);
+  return next(new AppError(err.message,500) );
 }
 
 

@@ -81,7 +81,7 @@ userSchema.methods.changedPasswordAfter= function(iat){
 userSchema.methods.createPasswordResetToken=function(){
 
     // creates a random reset token to be sent to user
-    const resetToken= crypto().randomBytes(32).toString("hex");
+    const resetToken= crypto.randomBytes(32).toString("hex");
 
     // creates an encrypted version of the reset token to be stored in the db,
     // we store this so we can compare during password reset 
