@@ -2,7 +2,7 @@ const User = require('../model/userModel');
 const jwt= require(`jsonwebtoken`);
 const AppError = require('./../appError');
 const {promisify}= require('util');
-
+const sendMail= require(`./../sendEmail`);
 
 const createToken = id=>{
     return jwt.sign({ id },
@@ -125,3 +125,52 @@ exports.restrictTo= (...roles)=>{//here roles is an array of arguments that we p
     next();
   }
 };
+
+try{
+exports.forgotPassword= async (req,res, next)=>{
+
+ try{ 
+// 1) check if the email sent by the user exists
+const user= await user.findOne(req.body.email);
+
+if(!user){return next(new AppError("No such email exists"));}
+
+//2) Generate a reset token
+const resetToken= user.createPasswordResetToken();
+
+// the token would have gotten updated in db, but not saved
+ await user.save({validateBeforeSave:false});
+
+ // we set the url/route of the reset password function
+ const url=`${req.protocol}//${req.get('host')}/api/user/resetPassword/${resetToken}`;
+
+ const message= `Want to reset your password? Click on the link ${url} to reset, else 
+  ignore this email.`;
+ 
+ const subject="Reset password"; 
+
+try{
+
+ sendMail(user.email,
+          subject,
+          message);
+
+ res.status(200)
+    .json({
+      status:"success",
+      message:"an email has been to send to your email address to reset the password"
+    })         
+} catch(err){
+
+  this.passwordResetToken=undefined;
+  this.passwordTokenExpire=undefined;
+  await user.save({validateBeforeSave:false}); 
+  return next(new AppError("An error has occured in sending the email, please try again"),500);
+}
+
+
+}
+
+catch(err){return next(err);}
+}   
+} catch(err){return next(err);}
