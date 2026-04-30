@@ -230,3 +230,30 @@ await user.save();
   
 
 };
+
+exports.updatePassword=async (req, res, next)=>{
+
+  try{
+
+  // get the user, req.user comes after protect function 
+  const user = await User.findById(req.user.id).select("+password");
+ 
+  if(!user){return next(new AppError("No user with such email exists",404));}
+
+  if(!(await user.correctPassword(req.body.passwordCurrent, user.password))){
+        return next(new AppError("Your password is incorrect"));}
+        
+   user.password= req.body.password;     
+   user.passwordConfirm= req.body.passwordConfirm;     
+   await user.save();
+   
+   const token = createToken(user._id);
+
+   res
+      .status(200)
+      .json({
+        status:"success",
+        token
+      })   } catch(err){return next(err);}
+
+}
