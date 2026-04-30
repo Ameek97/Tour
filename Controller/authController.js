@@ -3,6 +3,9 @@ const jwt= require(`jsonwebtoken`);
 const AppError = require('./../appError');
 const {promisify}= require('util');
 const sendMail= require(`./../sendEmail`);
+const bcrypt= require(`bcryptjs`);
+const crypto= require('crypto');
+
 
 const createToken = id=>{
     return jwt.sign({ id },
@@ -178,3 +181,52 @@ await sendMail({
 catch(err){return next(err);}
 }   
 } catch(err){return next(err);}
+
+
+exports.resetPassword=async(req,res,next) =>{
+
+try{  
+// 1) look for the user with this token
+
+console.log(req.body.password);
+console.log("helo");
+const hashtoken=  crypto
+                  .createHash(`sha256`)
+                  .update(req.params.token)
+                  .digest(`hex`);
+
+ const user= await User.findOne({
+        passwordResetToken: hashtoken,
+        passwordTokenExpire:{$gt:Date.now()} 
+ });
+if(!user){return next(new AppError("invalid or expired token",400)); }
+
+//2) set the new password
+
+// the password will be saved in the pre save
+
+if(!req.body.password){return next(new AppError("please provide a password",400));}
+
+
+user.password=req.body.password;
+user.passwordConfirm=req.body.passwordConfirm;
+user.passwordResetToken=undefined;
+user.passwordTokenExpire=undefined;
+
+await user.save();
+
+//3) update the password changedAt -> do this in pre save middlewear of model
+
+
+// 3) login the user in, send the jwt 
+
+ const token= createToken(user._id);
+ res
+    .status(200)
+    .json({
+        status:"success",
+        token
+    });   } catch(err){return next(err);}
+  
+
+};

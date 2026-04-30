@@ -53,12 +53,21 @@ const userSchema = new mongoose.Schema({
 // works only for create or save
 userSchema.pre('save', async function() {
     if (!this.isModified('password')){return };
-
+    
     // hashing the password 
     this.password = await bcrypt.hash(this.password, 12);
     this.passwordConfirm = undefined;
-
+    
+    
 });
+
+
+// update the password modify time if password was changed
+userSchema.pre('save', function () {
+  if (!this.isModified('password') || this.isNew) {return;}
+  this.passwordChangedAt = Date.now() - 1;
+});
+
 
 // schema method doesent use the arrow fucntion
 userSchema.methods.correctPassword= async function(p1,p2){
