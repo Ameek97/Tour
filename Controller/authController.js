@@ -15,27 +15,36 @@ const createToken = id=>{
          })
 }
 
+const createSendToken = (user, statusCode, res) => {
+  const token = createToken(user._id);
+
+  const cookieOptions = {
+    expires: new Date(
+      Date.now() + process.env.COOKIE_EXP * 24 * 60 * 60 * 1000
+    ),
+    httpOnly: true
+  };
+
+  if (process.env.NODE_ENV === "production") {
+    cookieOptions.secure = true;
+  }
+
+   // sends a cookie
+  res.cookie("jwt", token, cookieOptions);
+
+  res.status(statusCode).json({
+    status: "success",
+    token
+  });
+};
+
 
 exports.signup= async (req,res,next)=>{
 
     try{
      const newUser = await User.create(req.body);
 
-     const token = jwt.sign(
-
-        { id: newUser._id },
-        process.env.JWT_KEY,
-        { expiresIn: process.env.JWT_EXP,
-          
-         }
-     );
-
-
-     res.status(201).json({
-                           token:token,
-                           status:"success",
-                           user:newUser
-                          });
+     createSendToken(newUser,201,res);
    }
   catch(err){next(err);}
 }
@@ -59,10 +68,7 @@ const user = await User.findOne({email}).select("+password");
 if(!user || !(await user.correctPassword(password, user.password))){ 
    return next(new AppError(`Incorrect email or password`,401));}
 
-  const token = createToken(user._id);
-  res  
-     .status(200)
-     .json({token})
+  createSendToken(user,201,res);
 
 }
 
@@ -188,8 +194,6 @@ exports.resetPassword=async(req,res,next) =>{
 try{  
 // 1) look for the user with this token
 
-console.log(req.body.password);
-console.log("helo");
 const hashtoken=  crypto
                   .createHash(`sha256`)
                   .update(req.params.token)
@@ -203,7 +207,7 @@ if(!user){return next(new AppError("invalid or expired token",400)); }
 
 //2) set the new password
 
-// the password will be saved in the pre save
+// the password will be saved in the pre save middlewear
 
 if(!req.body.password){return next(new AppError("please provide a password",400));}
 
