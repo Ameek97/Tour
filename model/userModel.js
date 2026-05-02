@@ -44,7 +44,15 @@ const userSchema = new mongoose.Schema({
 
     passwordChangedAt: Date,
     passwordResetToken: String,
-    passwordTokenExpire: Date
+    passwordTokenExpire: Date,
+
+    active:{
+        type:Boolean,
+        default:true,
+        select:false
+    }
+
+    
 }, 
 
 );
@@ -60,6 +68,12 @@ userSchema.pre('save', async function() {
     
     
 });
+
+userSchema.pre(/^find/,async function(){
+
+    this.find({active:{$ne:false}})
+
+})
 
 
 // update the password modify time if password was changed
