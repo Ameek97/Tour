@@ -224,13 +224,9 @@ await user.save();
 
 // 3) login the user in, send the jwt 
 
- const token= createToken(user._id);
- res
-    .status(200)
-    .json({
-        status:"success",
-        token
-    });   } catch(err){return next(err);}
+  createSendToken(user,201,res);
+  
+   } catch(err){return next(err);}
   
 
 };
