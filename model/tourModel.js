@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-
+const User= require(`.//userModel`);
 
 const DB = process.env.DATABASE.replace('<db_password>', process.env.PASSWORD);
 
@@ -80,6 +80,13 @@ locations: [
   }
 ],
 
+    // embedded    
+    guides:[{
+        type :mongoose.Schema.ObjectId,
+        ref:`User`,
+    }],
+
+
     startDates:[Date],} , {
     toJSON:{virtuals:true},
     toObject:{virtuals:true}
@@ -89,15 +96,22 @@ tourSchema.virtual(`virtualField`).get(function(){
     return `this is veirtual field`;
 });
 
-// document middleware 
-tourSchema.pre('save', function(next){
-    console.log('PRE');
-    next();
-});
+// ***** document middleware *****
 
-tourSchema.post('save', function(doc){
-    console.log('POST');
-});
+// tourSchema.pre(`save`,async function(){
+
+// const guidePromises = this.guides.map(el => User.findById(el));
+// this.guides = await Promise.all(guidePromises);
+// })
+
+// tourSchema.pre('save', function(next){
+//     console.log('PRE');
+    
+// });
+
+// tourSchema.post('save', function(doc){
+//     console.log('POST');
+// });
 
 tourSchema.virtual(`save`,function(doc,next){
     console.log("saved");

@@ -17,7 +17,7 @@ Router
      .route(`/delete/:id`)    
      .delete(authController.protect,authController.restrictTo("admin","lead guide"),tourController.deleteTour)
 
-
+Router.delete('/delete',authController.protect,authController.restrictTo(`admin`),tourController.deleteAllTours);
 
 module.exports=Router  
     

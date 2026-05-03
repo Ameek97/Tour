@@ -7,6 +7,7 @@ module.exports=(err,req,res,next)=>{
   // we want all errors to be seen (we are developers)
  if(process.env.NODE_ENV=="development"){  
      
+   console.error('ERROR 💥', err); 
    res.status(statusCode).json({
    status:status,
    message:err.message, 
@@ -25,7 +26,6 @@ module.exports=(err,req,res,next)=>{
 
     // error due to client 
     if(error.isOperational==true){
-        
         
         res.status(error.statusCode).json({
         status:error.status,

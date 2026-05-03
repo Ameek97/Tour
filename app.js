@@ -16,7 +16,7 @@ const userRouter = require('./Routes/userRoutes');
 
 const app = express();
 
-// global midlewear
+// global midlewears
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.set('query parser', 'extended'); 
@@ -25,7 +25,7 @@ app.set('query parser', 'extended');
 
 const limiter= rateLimit({
   // how many reqs allowed
-  max: 3,
+  max: 100,
   // in how much time (in millisecond)
   windowMs: 60*60*1000,
   message:"Too many requests from this IP, try again in an hour."

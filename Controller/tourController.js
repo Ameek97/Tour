@@ -89,6 +89,8 @@ exports.tourByID= async (req,res)=>{
 
 exports.deleteTour=async (req,res)=>{
 try{
+
+
 await Tour.findByIdAndDelete(req.params.id)
 
 res
@@ -100,6 +102,16 @@ res
 } catch(err){
      next(err);
 }}
+
+exports.deleteAllTours=async (req,res,next)=>{
+  
+await Tour.deleteMany({});
+ return res.status(200).json({
+      status:"success"});
+
+}
+
+
 
 
 
