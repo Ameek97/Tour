@@ -96,6 +96,22 @@ tourSchema.virtual(`virtualField`).get(function(){
     return `this is veirtual field`;
 });
 
+
+// ***** query middleware *****
+
+// populate the child referenced docs
+tourSchema.pre(/^find/, function(){
+     this.populate({
+        path:'guides',
+        select:"-__v -passwordChangedAt"
+     });
+
+
+    
+
+})
+
+
 // ***** document middleware *****
 
 // tourSchema.pre(`save`,async function(){
