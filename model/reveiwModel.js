@@ -9,10 +9,11 @@ const reviewSchema = new mongoose.Schema({
         required:[true,"You must enter a review."]},
     rating: {
         type:Number,
-        max:1,
-        min:5},
+        max:5,
+        min:1},
 
     createdAt:{
+        select:false,
         type:Date,
         default:Date.now()},
 
@@ -29,6 +30,16 @@ const reviewSchema = new mongoose.Schema({
         required:[true,"a review must belongn to a tour"]
     }
 
+});
+
+// -- query middleware
+reviewSchema.pre(/^find/, function(){
+  this.populate({
+    path:`tour`
+  }).populate({
+    path:`user`
+    
+  })  
 });
 
 const Review=mongoose.model('Review',reviewSchema);

@@ -13,7 +13,7 @@ const port=3000;
 
 const tourRouter=require(`./Routes/tourRoutes`);
 const userRouter = require('./Routes/userRoutes');
-
+const reviewRouter = require(`./Routes/reviewRoutes`);
 const app = express();
 
 // global midlewears
@@ -37,7 +37,7 @@ app.use('/api', limiter);
 // route middlewear
 app.use("/api/tour",tourRouter);
 app.use(`/api/user`,userRouter);
-
+app.use('/api/review',reviewRouter);
 
 
 app.use((req, res, next) => {
@@ -51,4 +51,3 @@ app.listen(port,()=>{
     
     
 });
-
