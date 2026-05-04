@@ -25,7 +25,8 @@ exports.getReviews= async (req,res,next)=>{
    res.status(200)
    .json({
     status:"sucess",
-    review
+    result:reviews.length,
+    reviews
    })
 
     } catch(err){return next(err);}
