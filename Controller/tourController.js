@@ -48,10 +48,12 @@ catch(err){
 
 exports.tourByID= async (req,res,next)=>{
   try{
-    // TODO: implement get tour by ID
+    
+   const tour= await Tour.findById(req.query.id);
+
     res.status(200).json({
       status: 'success',
-      data: { tour: 'placeholder' }
+      tour
     });
   } catch(err){
     next(err);
