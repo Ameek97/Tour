@@ -86,6 +86,7 @@ locations: [
         ref:`User`,
     }],
 
+
     
 
 
@@ -99,6 +100,13 @@ tourSchema.virtual(`virtualField`).get(function(){
 });
 
 
+// *****  *****
+ tourSchema.virtual('reviews', {
+  ref: 'Review',  // model name of the child 
+  foreignField: 'tour', // actual name of the parent field given in the review model
+  localField: '_id'
+});
+
 // ***** query middleware *****
 
 // populate the child referenced docs
@@ -107,10 +115,6 @@ tourSchema.pre(/^find/, function(){
         path:'guides',
         select:"-__v -passwordChangedAt"
      });
-
-
-    
-
 })
 
 

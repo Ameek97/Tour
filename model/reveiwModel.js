@@ -34,10 +34,17 @@ const reviewSchema = new mongoose.Schema({
 
 // -- query middleware
 reviewSchema.pre(/^find/, function(){
-  this.populate({
-    path:`tour`,
-    select:'name photo'   // we just want to see the name of the tour
-  }).populate({
+
+/*----- we dont want to populate the tour,rather just show the id ------*/    
+//   this.populate({
+//     path:`tour`,
+//     select:'name photo'   // we just want to see the name of the tour
+//   }).populate({
+//     path:`user`,
+//     select:'name'   // we just want to see the name of the user 
+//   })  ]
+
+    this.populate({
     path:`user`,
     select:'name'   // we just want to see the name of the user 
   })  

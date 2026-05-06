@@ -49,7 +49,7 @@ catch(err){
 exports.tourByID= async (req,res,next)=>{
   try{
     
-   const tour= await Tour.findById(req.query.id);
+   const tour= await Tour.findById(req.query.id).populate('reviews');
 
     res.status(200).json({
       status: 'success',
@@ -75,7 +75,7 @@ exports.deleteTour= async (req,res,next)=>{
 
 exports.tourByID= async (req,res)=>{
    try{
-    const tour= await Tour.findById(req.params.id);
+    const tour= await Tour.findById(req.params.id).populate('reviews');
     res
     .status(200)
     .json({
