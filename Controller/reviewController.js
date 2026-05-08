@@ -24,7 +24,9 @@ res.status(200)
 exports.getReviews= async (req,res,next)=>{
     try{
 
-   const reviews= await Review.find({});
+   let filter;
+   if(req.params.tour){filter={tour:req.params.tour}} // tour contains parent(tour id) it refers to      
+   const reviews= await Review.find(filter);
     
    res.status(200)
    .json({

@@ -2,8 +2,11 @@ const tourController=require('./../Controller/tourController');
 const express = require('express');
 const authController=require(`./../Controller/authController`);
 const reviewController=require('./../Controller/reviewController');
+const reviewRouter=require('./../Routes/reviewRoutes');
 
 const Router=express.Router();
+
+Router.use(`/:tour/review`,reviewRouter); // get/post.. review on some tour
 
 Router
   .route(`/`)
