@@ -1,5 +1,7 @@
 
 const Review= require(`./../model/reveiwModel`)
+const handlerFactory=require('./handlerFactory');
+
 
 exports.postReview=async (req,res, next)=>{
 
@@ -24,7 +26,7 @@ res.status(200)
 exports.getReviews= async (req,res,next)=>{
     try{
 
-   let filter;
+   let filter={};
    if(req.params.tour){filter={tour:req.params.tour}} // tour contains parent(tour id) it refers to      
    const reviews= await Review.find(filter);
     
@@ -38,4 +40,6 @@ exports.getReviews= async (req,res,next)=>{
     } catch(err){return next(err);}
 
 
-}
+};
+
+exports.deleteReview= handlerFactory.deleteOne(Review);

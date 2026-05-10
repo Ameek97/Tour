@@ -9,4 +9,10 @@ Router
      .post(reviewController.postReview)
      .get(reviewController.getReviews)
 
+Router 
+     .route('/:id')
+     .delete(reviewController.deleteReview);
+
+
 module.exports=Router     
+

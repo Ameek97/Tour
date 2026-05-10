@@ -1,3 +1,4 @@
+const AppError = require("../appError")
 
 
 
@@ -6,7 +7,10 @@ exports.deleteOne=Model=>{
 
    return async(req,res,next)=>{    
 try{
-await Model.findByIdAndDelete(req.params.id)
+const doc = await Model.findByIdAndDelete(req.params.id)
+
+if(!doc){return next(new AppError('no document with such id was found',404));}
+
 res
    .status(200)
    .json({
