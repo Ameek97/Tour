@@ -1,6 +1,6 @@
 const Tour= require('../model/tourModel.js');
 const APIfeatures= require(`./../Utils/APIfeatures`);
- 
+const handlerFactory=require('./handlerFactory');
 
 exports.getAllTours= async(req,res,next)=>{
 try{
@@ -88,13 +88,13 @@ exports.tourByID= async (req,res)=>{
         next(err);
     }
 }
+/* -----------------------------------------------------------------*/
+exports.deleteTour=handlerFactory.deleteOne(Tour); // this fn immidiately return async (req,res,next)
 
-exports.deleteTour=async (req,res)=>{
+/* 
+exports.deleteTour=async (req,res)=>{      
 try{
-
-
 await Tour.findByIdAndDelete(req.params.id)
-
 res
    .status(200)
    .json({
@@ -104,6 +104,7 @@ res
 } catch(err){
      next(err);
 }}
+*/
 
 exports.deleteAllTours=async (req,res,next)=>{
   

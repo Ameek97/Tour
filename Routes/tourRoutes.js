@@ -19,7 +19,7 @@ Router
 
 Router
      .route(`/delete/:id`)    
-     .delete(authController.protect,authController.restrictTo("admin","lead guide"),tourController.deleteTour)
+     .delete(tourController.deleteTour)
 
 Router.delete('/delete',authController.protect,authController.restrictTo(`admin`),tourController.deleteAllTours);
 
@@ -27,6 +27,7 @@ Router
      .route(`/:id/review`)
      .post(authController.protect, authController.restrictTo(`user`),reviewController.postReview) 
      .get(authController.protect,reviewController.getReviews); 
+     
      
 module.exports=Router  
     
