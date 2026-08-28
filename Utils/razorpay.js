@@ -1,3 +1,7 @@
+const path = require('path');
+const dotenv = require('dotenv');
+dotenv.config({ path: path.join(__dirname, '..', 'config.env') });
+
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 

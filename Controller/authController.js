@@ -87,10 +87,15 @@ let token;
 
 if(req.headers.authorization  && req.headers.authorization.startsWith("Bearer")){
   token = req.headers.authorization.split(' ')[1];
+} else if(req.headers.cookie){
+  const jwtCookie= req.headers.cookie.split(';').map(part=>part.trim()).find(part=>part.startsWith('jwt='));
+  if(jwtCookie){
+    token= decodeURIComponent(jwtCookie.slice(4));
+  }
 }
 
 // if no token was sent
-if(!token){return next(new AppError("Request denied you were not logged in",401));}
+if(!token || token==='loggedout'){return next(new AppError("Request denied you were not logged in",401));}
 
 
 // 2) verify the token
@@ -119,6 +124,34 @@ req.user=newUser; // just the token may have been provided, req.user could have 
 next();
 
 }
+
+exports.logout= (req,res)=>{
+  res.cookie('jwt','loggedout',{
+    expires: new Date(Date.now()+10*1000),
+    httpOnly: true
+  });
+
+  res.status(200).json({
+    status:'success'
+  });
+};
+
+exports.getMe= (req,res)=>{
+  const user= req.user;
+
+  res.status(200).json({
+    status:'success',
+    data:{
+      user:{
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        photo: user.photo
+      }
+    }
+  });
+};
 
 // Authorisation function based on role in schema, 
 // if the role is not allowed than an error is sent and next() is not reached

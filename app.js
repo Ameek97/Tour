@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const dotenv = require('dotenv');
 const dns = require('dns'); 
 const appError= require('./appError');
@@ -6,7 +7,7 @@ const errorControl= require("./ErrorController");
 const rateLimit= require('express-rate-limit');
 
 
-dotenv.config({ path: './config.env' });
+dotenv.config({ path: path.join(__dirname, 'config.env') });
 dns.setServers(["1.1.1.1","8.8.8.8"]);
 const port=process.env.PORT;
 
