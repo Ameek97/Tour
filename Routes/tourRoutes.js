@@ -5,7 +5,7 @@ const reviewRouter=require('./../Routes/reviewRoutes');
 
 const Router=express.Router();
 
-Router.use(`/:tour/review`,reviewRouter); // get/post.. review on some tour
+Router.use(`/:tourId/reviews`,reviewRouter); // get/post.. review on some tour
 
 Router
   .route(`/`)
