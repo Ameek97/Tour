@@ -95,6 +95,8 @@ locations: [
     toObject:{virtuals:true}
 });
 
+tourSchema.index({ startLocation: '2dsphere' });
+
 tourSchema.virtual(`virtualField`).get(function(){
     return `this is veirtual field`;
 });

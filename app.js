@@ -14,6 +14,7 @@ const port=process.env.PORT;
 const tourRouter=require(`./Routes/tourRoutes`);
 const userRouter = require('./Routes/userRoutes');
 const reviewRouter = require(`./Routes/reviewRoutes`);
+const bookingRouter = require('./Routes/bookingRoutes');
 const app = express();
 
 // global midlewears
@@ -38,6 +39,7 @@ app.use('/api', limiter);
 app.use("/api/tour",tourRouter);
 app.use(`/api/user`,userRouter);
 app.use('/api/review',reviewRouter);
+app.use('/api/booking',bookingRouter);
 
 
 app.use((req, res, next) => {
