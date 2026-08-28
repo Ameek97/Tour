@@ -6,12 +6,12 @@ const Router= express.Router({mergeParams:true}); // so the router would have ac
 
 Router
      .route(`/`)
-     .post(reviewController.postReview)
+     .post(authController.protect, authController.restrictTo(`user`), reviewController.postReview)
      .get(reviewController.getReviews)
 
 Router 
      .route('/:id')
-     .delete(reviewController.deleteReview);
+     .delete(authController.protect, authController.restrictTo(`user`, `admin`), reviewController.deleteReview);
 
 
 module.exports=Router     

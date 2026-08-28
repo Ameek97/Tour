@@ -1,6 +1,7 @@
 const Tour= require('../model/tourModel.js');
 const APIfeatures= require(`./../Utils/APIfeatures`);
 const handlerFactory=require('./handlerFactory');
+const AppError= require('../appError');
 
 exports.getAllTours= async(req,res,next)=>{
 try{
@@ -47,35 +48,11 @@ catch(err){
 }
 
 exports.tourByID= async (req,res,next)=>{
-  try{
-    
-   const tour= await Tour.findById(req.query.id).populate('reviews');
-
-    res.status(200).json({
-      status: 'success',
-      tour
-    });
-  } catch(err){
-    next(err);
-  }
-}
-
-exports.deleteTour= async (req,res,next)=>{
-  try{
-    // TODO: implement delete tour
-    res.status(200).json({
-      status: 'success',
-      message: 'Tour deleted (placeholder)'
-    });
-  } catch(err){
-    next(err);
-  }
-}
-
-
-exports.tourByID= async (req,res)=>{
    try{
     const tour= await Tour.findById(req.params.id).populate('reviews');
+    if(!tour){
+      return next(new AppError('no document with such id was found',404));
+    }
     res
     .status(200)
     .json({
@@ -87,6 +64,30 @@ exports.tourByID= async (req,res)=>{
      }catch(err){ 
         next(err);
     }
+}
+
+exports.updateTour= async (req,res,next)=>{
+  try{
+    if(req.body && req.body._id){delete req.body._id;}
+
+    const tour= await Tour.findByIdAndUpdate(req.params.id, req.body, {
+      new:true,
+      runValidators:true
+    });
+
+    if(!tour){
+      return next(new AppError('no document with such id was found',404));
+    }
+
+    res
+    .status(200)
+    .json({
+        status:"success",
+        data:{tour}
+    });
+  } catch(err){
+    next(err);
+  }
 }
 /* -----------------------------------------------------------------*/
 exports.deleteTour=handlerFactory.deleteOne(Tour); // this fn immidiately return async (req,res,next)

@@ -8,7 +8,7 @@ const rateLimit= require('express-rate-limit');
 
 dotenv.config({ path: './config.env' });
 dns.setServers(["1.1.1.1","8.8.8.8"]);
-const port=3000;
+const port=process.env.PORT;
 
 
 const tourRouter=require(`./Routes/tourRoutes`);

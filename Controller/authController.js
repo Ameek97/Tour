@@ -42,7 +42,10 @@ const createSendToken = (user, statusCode, res) => {
 exports.signup= async (req,res,next)=>{
 
     try{
-     const newUser = await User.create(req.body);
+     const newUser = await User.create({
+        ...req.body,
+        role: 'user'
+     });
 
      createSendToken(newUser,201,res);
    }

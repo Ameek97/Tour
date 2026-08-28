@@ -16,12 +16,12 @@ const tourSchema= new mongoose.Schema({
     name:{
         type:String,
         unique:[true,`A tour must have a name`],
-        require:true,
+        required:true,
         },
     
         price:{
             type:Number,
-            require:[true,`A tour must a price`],
+            required:[true,`A tour must a price`],
         },
 
     rating:{
@@ -42,7 +42,7 @@ const tourSchema= new mongoose.Schema({
 
     imageCover:{
       type:String,
-      reuired:[true,`an tour must have an image cover`]
+      required:[true,`an tour must have an image cover`]
     },
 
     images:{
@@ -51,7 +51,7 @@ const tourSchema= new mongoose.Schema({
 
     createdAt:{
         type:Date,
-        deafult:Date.now
+        default:Date.now
     },
 
  startLocation: {
