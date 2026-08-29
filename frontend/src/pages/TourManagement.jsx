@@ -293,6 +293,7 @@ export default function TourManagement() {
   const [bookingActionSuccess, setBookingActionSuccess] = useState('');
   const [updatingBookingId, setUpdatingBookingId] = useState('');
   const [deletingBookingId, setDeletingBookingId] = useState('');
+  const [statusDrafts, setStatusDrafts] = useState({});
 
   useEffect(() => {
     let cancelled = false;
@@ -416,11 +417,13 @@ export default function TourManagement() {
     setDeletingId(tourId);
     try {
       await deleteTour(tourId);
-      setTours((current) => current.filter((tour) => tour._id !== tourId));
       setActionSuccess('Tour deleted.');
       if (editingId === tourId) {
         cancelEdit();
       }
+      const listed = await getTours({ page, limit: LIST_LIMIT, sort: 'name' });
+      setTours(listed.data?.tours || []);
+      setResultCount(Number(listed.result) || 0);
     } catch (err) {
       setActionError(err.message || 'Unable to delete this tour.');
     } finally {
@@ -461,6 +464,11 @@ export default function TourManagement() {
     try {
       await updateBookingStatus(bookingId, status);
       setBookingActionSuccess('Booking status updated.');
+      setStatusDrafts((current) => {
+        const next = { ...current };
+        delete next[bookingId];
+        return next;
+      });
       await loadBookings();
     } catch (err) {
       setBookingActionError(err.message || 'Unable to update booking status.');
@@ -479,7 +487,7 @@ export default function TourManagement() {
     try {
       await deleteBooking(bookingId);
       setBookingActionSuccess('Booking deleted.');
-      setBookings((current) => current.filter((item) => item._id !== bookingId));
+      await loadBookings();
     } catch (err) {
       setBookingActionError(err.message || 'Unable to delete this booking.');
     } finally {
@@ -680,6 +688,7 @@ export default function TourManagement() {
             <table className="management-table">
               <thead>
                 <tr>
+                  <th>Booking ID</th>
                   <th>Tour</th>
                   <th>User</th>
                   <th>Email</th>
@@ -693,15 +702,26 @@ export default function TourManagement() {
               <tbody>
                 {bookings.map((booking) => (
                   <tr key={booking._id}>
+                    <td>{booking._id}</td>
                     <td>{nestedName(booking.tour)}</td>
                     <td>{nestedName(booking.user)}</td>
                     <td>{nestedEmail(booking.user)}</td>
                     <td>{booking.price != null ? `$${booking.price}` : '—'}</td>
                     <td>
                       <select
-                        value={BOOKING_STATUSES.includes(booking.status) ? booking.status : 'pending'}
+                        value={
+                          statusDrafts[booking._id] ||
+                          (BOOKING_STATUSES.includes(booking.status)
+                            ? booking.status
+                            : 'pending')
+                        }
                         disabled={updatingBookingId === booking._id}
-                        onChange={(event) => handleBookingStatus(booking._id, event.target.value)}
+                        onChange={(event) =>
+                          setStatusDrafts((current) => ({
+                            ...current,
+                            [booking._id]: event.target.value
+                          }))
+                        }
                       >
                         {BOOKING_STATUSES.map((status) => (
                           <option key={status} value={status}>
@@ -713,14 +733,32 @@ export default function TourManagement() {
                     <td>{booking.paymentStatus || '—'}</td>
                     <td>{booking.createdAt ? formatWhen(booking.createdAt) : '—'}</td>
                     <td>
-                      <button
-                        type="button"
-                        className="review-delete"
-                        disabled={deletingBookingId === booking._id}
-                        onClick={() => handleDeleteBooking(booking._id)}
-                      >
-                        {deletingBookingId === booking._id ? 'Deleting...' : 'Delete Booking'}
-                      </button>
+                      <div className="management-actions">
+                        <button
+                          type="button"
+                          disabled={updatingBookingId === booking._id}
+                          onClick={() =>
+                            handleBookingStatus(
+                              booking._id,
+                              statusDrafts[booking._id] || booking.status
+                            )
+                          }
+                        >
+                          {updatingBookingId === booking._id
+                            ? 'Updating...'
+                            : 'Update Status'}
+                        </button>
+                        <button
+                          type="button"
+                          className="review-delete"
+                          disabled={deletingBookingId === booking._id}
+                          onClick={() => handleDeleteBooking(booking._id)}
+                        >
+                          {deletingBookingId === booking._id
+                            ? 'Deleting...'
+                            : 'Delete Booking'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

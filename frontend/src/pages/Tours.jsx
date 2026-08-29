@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import TourCard from '../components/TourCard';
 import {
   getTopCheapTours,
+  getTourStats,
   getTours,
   getToursWithin,
   PAGE_SIZE
@@ -10,17 +11,29 @@ import {
 
 const PAGE_SIZE_OPTIONS = [3, 6, 12];
 
+function formatStat(value, digits = 0) {
+  if (value == null || Number.isNaN(Number(value))) {
+    return '—';
+  }
+  return Number(value).toLocaleString(undefined, {
+    maximumFractionDigits: digits
+  });
+}
+
 export default function Tours() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [tours, setTours] = useState([]);
   const [resultCount, setResultCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadedQuery, setLoadedQuery] = useState('');
   const [error, setError] = useState('');
   const [filterError, setFilterError] = useState('');
 
   const [cheapTours, setCheapTours] = useState([]);
   const [cheapLoading, setCheapLoading] = useState(true);
   const [cheapError, setCheapError] = useState('');
+  const [catalogStats, setCatalogStats] = useState(null);
+  const [statsError, setStatsError] = useState('');
 
   const [nearTours, setNearTours] = useState([]);
   const [nearSearched, setNearSearched] = useState(false);
@@ -29,10 +42,14 @@ export default function Tours() {
 
   const minPrice = searchParams.get('price[gte]') || '';
   const maxPrice = searchParams.get('price[lte]') || '';
+  const minRating = searchParams.get('ratingAverage[gte]') || '';
   const sort = searchParams.get('sort') || '';
-  const page = Number(searchParams.get('page') || 1);
+  const rawPage = Number(searchParams.get('page') || 1);
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
   const limitParam = Number(searchParams.get('limit'));
   const limit = PAGE_SIZE_OPTIONS.includes(limitParam) ? limitParam : PAGE_SIZE;
+  const queryKey = [minPrice, maxPrice, minRating, sort, page, limit].join('|');
+  const showingResults = !loading && loadedQuery === queryKey;
 
   useEffect(() => {
     let cancelled = false;
@@ -66,6 +83,30 @@ export default function Tours() {
   useEffect(() => {
     let cancelled = false;
 
+    async function loadStats() {
+      setStatsError('');
+      try {
+        const data = await getTourStats();
+        if (!cancelled) {
+          setCatalogStats(data.data?.stats || null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setCatalogStats(null);
+          setStatsError(err.message || 'Unable to load catalog statistics.');
+        }
+      }
+    }
+
+    loadStats();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
     async function loadTours() {
       setLoading(true);
       setError('');
@@ -73,6 +114,7 @@ export default function Tours() {
         const data = await getTours({
           minPrice,
           maxPrice,
+          minRating,
           sort,
           page,
           limit
@@ -80,11 +122,13 @@ export default function Tours() {
         if (!cancelled) {
           setTours(data.data?.tours || []);
           setResultCount(Number(data.result) || 0);
+          setLoadedQuery(queryKey);
         }
       } catch (err) {
         if (!cancelled) {
           setTours([]);
           setResultCount(0);
+          setLoadedQuery(queryKey);
           setError(err.message || 'Unable to load tours.');
         }
       } finally {
@@ -98,7 +142,7 @@ export default function Tours() {
     return () => {
       cancelled = true;
     };
-  }, [minPrice, maxPrice, sort, page, limit]);
+  }, [minPrice, maxPrice, minRating, sort, page, limit, queryKey]);
 
   function updateQuery(updates, { resetPage } = { resetPage: false }) {
     const next = new URLSearchParams(searchParams);
@@ -139,6 +183,7 @@ export default function Tours() {
     const form = new FormData(event.target);
     const minParsed = parsePriceInput(form.get('minPrice'), 'Minimum price');
     const maxParsed = parsePriceInput(form.get('maxPrice'), 'Maximum price');
+    const ratingParsed = parsePriceInput(form.get('minRating'), 'Minimum average rating');
 
     if (minParsed.error) {
       setFilterError(minParsed.error);
@@ -146,6 +191,10 @@ export default function Tours() {
     }
     if (maxParsed.error) {
       setFilterError(maxParsed.error);
+      return;
+    }
+    if (ratingParsed.error) {
+      setFilterError(ratingParsed.error);
       return;
     }
 
@@ -160,6 +209,7 @@ export default function Tours() {
       {
         'price[gte]': minParsed.value,
         'price[lte]': maxParsed.value,
+        'ratingAverage[gte]': ratingParsed.value,
         sort: form.get('sort') || '',
         limit: form.get('limit') || String(PAGE_SIZE)
       },
@@ -171,8 +221,6 @@ export default function Tours() {
     setFilterError('');
     setSearchParams(new URLSearchParams({ page: '1' }));
   }
-
-  const hasActiveFilters = Boolean(minPrice || maxPrice || sort);
 
   async function handleNearSubmit(event) {
     event.preventDefault();
@@ -199,6 +247,19 @@ export default function Tours() {
 
   const hasPrevious = page > 1;
   const hasNext = resultCount >= limit;
+  const prices = tours
+    .map((tour) => Number(tour.price))
+    .filter((value) => Number.isFinite(value));
+  const ratings = tours
+    .map((tour) => Number(tour.ratingAverage))
+    .filter((value) => Number.isFinite(value));
+  const currentAvgPrice = prices.length
+    ? prices.reduce((sum, value) => sum + value, 0) / prices.length
+    : null;
+  const currentMinPrice = prices.length ? Math.min(...prices) : null;
+  const currentAvgRating = ratings.length
+    ? ratings.reduce((sum, value) => sum + value, 0) / ratings.length
+    : null;
 
   return (
     <main className="page page-wide">
@@ -211,11 +272,13 @@ export default function Tours() {
         {!cheapLoading && !cheapError && cheapTours.length === 0 ? (
           <p>No best value tours found.</p>
         ) : null}
-        <div className="tour-grid">
-          {cheapTours.map((tour) => (
-            <TourCard key={tour._id} tour={tour} />
-          ))}
-        </div>
+        {!cheapLoading && cheapTours.length > 0 ? (
+          <div className="tour-grid">
+            {cheapTours.map((tour) => (
+              <TourCard key={tour._id} tour={tour} />
+            ))}
+          </div>
+        ) : null}
       </section>
 
       <section className="tour-section">
@@ -247,11 +310,13 @@ export default function Tours() {
         {!nearLoading && !nearError && nearSearched && nearTours.length === 0 ? (
           <p>No tours found in this area.</p>
         ) : null}
-        <div className="tour-grid">
-          {nearTours.map((tour) => (
-            <TourCard key={tour._id} tour={tour} />
-          ))}
-        </div>
+        {!nearLoading && nearTours.length > 0 ? (
+          <div className="tour-grid">
+            {nearTours.map((tour) => (
+              <TourCard key={tour._id} tour={tour} />
+            ))}
+          </div>
+        ) : null}
       </section>
 
       <section className="tour-section">
@@ -275,6 +340,17 @@ export default function Tours() {
               min="0"
               defaultValue={maxPrice}
               key={`max-${maxPrice}`}
+            />
+          </label>
+          <label>
+            Minimum average rating
+            <input
+              type="number"
+              name="minRating"
+              min="0"
+              step="0.1"
+              defaultValue={minRating}
+              key={`rating-${minRating}`}
             />
           </label>
           <label>
@@ -303,33 +379,82 @@ export default function Tours() {
         </form>
         {filterError ? <p className="error">{filterError}</p> : null}
 
-        {loading ? <p className="status">Loading tours...</p> : null}
-        {error ? <p className="error">{error}</p> : null}
+        {statsError ? <p className="error">{statsError}</p> : null}
+        {catalogStats ? (
+          <section>
+            <h3>Catalog statistics</h3>
+            <ul className="stats-grid">
+              <li className="stats-card">
+                <h2>Tours in catalog</h2>
+                <p>{formatStat(catalogStats.numberOfTours, 0)}</p>
+              </li>
+              <li className="stats-card">
+                <h2>Average price</h2>
+                <p>${formatStat(catalogStats.avgPrice, 0)}</p>
+              </li>
+              <li className="stats-card">
+                <h2>Lowest price</h2>
+                <p>${formatStat(catalogStats.minPrice, 0)}</p>
+              </li>
+              <li className="stats-card">
+                <h2>Average rating</h2>
+                <p>{formatStat(catalogStats.avgRating, 2)}</p>
+              </li>
+            </ul>
+          </section>
+        ) : null}
 
-        {!loading && !error && tours.length === 0 ? (
+        {!showingResults ? <p className="status">Loading tours...</p> : null}
+        {showingResults && error ? <p className="error">{error}</p> : null}
+
+        {showingResults && !error && tours.length === 0 ? (
           <p>
-            No tours found.
-            {hasActiveFilters ? (
-              <>
-                {' '}
-                <button type="button" className="link-button" onClick={clearFilters}>
-                  Clear filters
-                </button>
-              </>
-            ) : null}
+            No tours found. Try changing or clearing your filters.{' '}
+            <button type="button" className="link-button" onClick={clearFilters}>
+              Clear filters
+            </button>
           </p>
         ) : null}
 
-        <div className="tour-grid">
-          {tours.map((tour) => (
-            <TourCard key={tour._id} tour={tour} />
-          ))}
-        </div>
+        {showingResults && !error && tours.length > 0 ? (
+          <>
+            <section>
+              <h3>Current results</h3>
+              <p>
+                Page {page} · {resultCount} {resultCount === 1 ? 'tour' : 'tours'} on
+                this page
+              </p>
+              <ul className="stats-grid">
+                <li className="stats-card">
+                  <h2>Tours on this page</h2>
+                  <p>{formatStat(resultCount, 0)}</p>
+                </li>
+                <li className="stats-card">
+                  <h2>Average price</h2>
+                  <p>${formatStat(currentAvgPrice, 0)}</p>
+                </li>
+                <li className="stats-card">
+                  <h2>Lowest price</h2>
+                  <p>${formatStat(currentMinPrice, 0)}</p>
+                </li>
+                <li className="stats-card">
+                  <h2>Average rating</h2>
+                  <p>{formatStat(currentAvgRating, 2)}</p>
+                </li>
+              </ul>
+            </section>
+            <div className="tour-grid">
+              {tours.map((tour) => (
+                <TourCard key={tour._id} tour={tour} />
+              ))}
+            </div>
+          </>
+        ) : null}
 
         <div className="pagination">
           <button
             type="button"
-            disabled={!hasPrevious || loading}
+            disabled={!showingResults || !hasPrevious || loading}
             onClick={() => updateQuery({ page: page - 1 })}
           >
             Previous
@@ -337,7 +462,7 @@ export default function Tours() {
           <span>Page {page}</span>
           <button
             type="button"
-            disabled={!hasNext || loading}
+            disabled={!showingResults || !hasNext || loading}
             onClick={() => updateQuery({ page: page + 1 })}
           >
             Next

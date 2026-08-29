@@ -49,7 +49,7 @@ exports.getReviews= async (req,res,next)=>{
 
    let filter={};
    if(req.params.tourId){filter={tour:req.params.tourId}}
-   const reviews= await Review.find(filter);
+   const reviews= await Review.find(filter).select('+createdAt');
     
    res.status(200)
    .json({

@@ -5,14 +5,18 @@ import { createBooking } from '../services/bookingService';
 import { createReview, deleteReview, getReviewsByTour } from '../services/reviewService';
 import { getTourById } from '../services/tourService';
 
+function isHttpUrl(value) {
+  return Boolean(value && String(value).startsWith('http'));
+}
+
 function httpImages(tour) {
   const urls = [];
-  if (tour.imageCover && String(tour.imageCover).startsWith('http')) {
+  if (isHttpUrl(tour.imageCover)) {
     urls.push(tour.imageCover);
   }
   if (Array.isArray(tour.images)) {
     tour.images.forEach((src) => {
-      if (src && String(src).startsWith('http') && !urls.includes(src)) {
+      if (isHttpUrl(src) && !urls.includes(src)) {
         urls.push(src);
       }
     });
@@ -25,7 +29,11 @@ function formatDate(value) {
   if (Number.isNaN(date.getTime())) {
     return String(value);
   }
-  return date.toLocaleDateString();
+  return date.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
 }
 
 function reviewerName(user) {
@@ -41,17 +49,75 @@ function reviewerName(user) {
   return null;
 }
 
-function starLabel(rating) {
-  if (typeof rating !== 'number' || Number.isNaN(rating)) {
+function reviewOwnerId(review) {
+  if (!review?.user) {
     return null;
   }
-  const filled = Math.max(0, Math.min(5, Math.round(rating)));
+  if (typeof review.user === 'string') {
+    return review.user;
+  }
+  return review.user._id || review.user.id || null;
+}
+
+function canDeleteReview(review, user) {
+  if (!user) {
+    return false;
+  }
+  if (user.role === 'admin') {
+    return true;
+  }
+  const ownerId = reviewOwnerId(review);
+  return ownerId != null && String(ownerId) === String(user.id);
+}
+
+function starLabel(rating) {
+  const value = Number(rating);
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+  const filled = Math.max(0, Math.min(5, Math.round(value)));
   return `${'★'.repeat(filled)}${'☆'.repeat(5 - filled)}`;
+}
+
+function locationLine(loc) {
+  if (!loc || typeof loc !== 'object') {
+    return null;
+  }
+  const parts = [];
+  if (loc.description) {
+    parts.push(loc.description);
+  }
+  if (loc.address) {
+    parts.push(loc.address);
+  }
+  if (Array.isArray(loc.coordinates) && loc.coordinates.length >= 2) {
+    const [lng, lat] = loc.coordinates;
+    if (Number.isFinite(Number(lng)) && Number.isFinite(Number(lat))) {
+      parts.push(`lng ${lng}, lat ${lat}`);
+    }
+  }
+  return parts.length ? parts.join(' · ') : null;
+}
+
+function reviewErrorMessage(err, fallback) {
+  if (!err) {
+    return fallback;
+  }
+  if (err.status === 403) {
+    return err.message || 'You are not authorised to do this.';
+  }
+  if (err.status === 401) {
+    return err.message || 'Please log in to continue.';
+  }
+  if (err.status === 400) {
+    return err.message || 'Please check your review and try again.';
+  }
+  return err.message || fallback;
 }
 
 export default function TourDetails() {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [tour, setTour] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -140,7 +206,7 @@ export default function TourDetails() {
         if (!cancelled) {
           setReviews([]);
           setReviewCount(null);
-          setReviewsError('Unable to load reviews.');
+          setReviewsError(reviewErrorMessage(err, 'Unable to load reviews.'));
         }
       } finally {
         if (!cancelled) {
@@ -157,6 +223,9 @@ export default function TourDetails() {
 
   async function handleReviewSubmit(event) {
     event.preventDefault();
+    if (submitting) {
+      return;
+    }
     setFormError('');
     setFormSuccess('');
 
@@ -180,7 +249,7 @@ export default function TourDetails() {
       setFormSuccess('Review submitted.');
       await refreshReviews();
     } catch (err) {
-      setFormError(err.message || 'Unable to submit review.');
+      setFormError(reviewErrorMessage(err, 'Unable to submit review.'));
     } finally {
       setSubmitting(false);
     }
@@ -202,7 +271,7 @@ export default function TourDetails() {
       );
       setDeleteSuccess('Review deleted.');
     } catch (err) {
-      setDeleteError(err.message || 'Unable to delete this review.');
+      setDeleteError(reviewErrorMessage(err, 'Unable to delete this review.'));
     } finally {
       setDeletingId('');
     }
@@ -224,18 +293,13 @@ export default function TourDetails() {
   }
 
   const images = tour ? httpImages(tour) : [];
-  const startPlace =
-    tour?.startLocation?.description || tour?.startLocation?.address || null;
+  const startLine = tour ? locationLine(tour.startLocation) : null;
   const extraLocations = Array.isArray(tour?.locations)
-    ? tour.locations
-        .map((loc) => loc.description || loc.address)
-        .filter(Boolean)
+    ? tour.locations.map(locationLine).filter(Boolean)
     : [];
-  const guideNames = Array.isArray(tour?.guides)
-    ? tour.guides
-        .map((guide) => (typeof guide === 'object' ? guide.name : null))
-        .filter(Boolean)
-    : [];
+  const guides = Array.isArray(tour?.guides) ? tour.guides : [];
+  const startDates = Array.isArray(tour?.startDates) ? tour.startDates : [];
+  const headerStars = tour ? starLabel(tour.ratingAverage ?? tour.rating) : null;
 
   return (
     <main className="page page-wide">
@@ -247,145 +311,210 @@ export default function TourDetails() {
       {error ? <p className="error">{error}</p> : null}
 
       {!loading && !error && tour ? (
-        <article className="tour-details">
-          <h1>{tour.name}</h1>
-
-          {images.length > 0 ? (
-            <div className="tour-details-images">
-              {images.map((src) => (
-                <img key={src} src={src} alt="" />
-              ))}
-            </div>
-          ) : null}
-
-          {tour.summary ? <p>{tour.summary}</p> : null}
-
-          <ul className="tour-details-facts">
-            {tour.price != null ? <li>Price: ${tour.price}</li> : null}
-            {tour.ratingAverage != null ? (
-              <li>Average rating: {tour.ratingAverage}</li>
-            ) : null}
-            {tour.rating != null ? <li>Rating: {tour.rating}</li> : null}
-            {startPlace ? <li>Start location: {startPlace}</li> : null}
-            {extraLocations.length > 0 ? (
-              <li>Locations: {extraLocations.join(', ')}</li>
-            ) : null}
-            {Array.isArray(tour.startDates) && tour.startDates.length > 0 ? (
-              <li>Start dates: {tour.startDates.map(formatDate).join(', ')}</li>
-            ) : null}
-            {guideNames.length > 0 ? <li>Guides: {guideNames.join(', ')}</li> : null}
-          </ul>
-        </article>
-      ) : null}
-
-      <section className="reviews">
-        <h2>
-          Reviews
-          {reviewCount != null ? ` (${reviewCount})` : null}
-        </h2>
-        {reviewsLoading ? <p className="status">Loading reviews...</p> : null}
-        {reviewsError ? <p className="error">{reviewsError}</p> : null}
-        {deleteError ? <p className="error">{deleteError}</p> : null}
-        {deleteSuccess ? <p className="success">{deleteSuccess}</p> : null}
-        {!reviewsLoading && !reviewsError && reviews.length === 0 ? (
-          <p>No reviews yet.</p>
-        ) : null}
-        {!reviewsLoading && !reviewsError && reviews.length > 0 ? (
-          <ul className="review-list">
-            {reviews.map((item) => {
-              const name = reviewerName(item.user);
-              const stars = starLabel(item.rating);
-              const date = item.createdAt ? formatDate(item.createdAt) : null;
-              return (
-                <li key={item._id} className="review-card">
-                  {name ? <p className="review-author">{name}</p> : null}
-                  {stars ? (
-                    <p className="review-rating" aria-label={`Rating ${item.rating} of 5`}>
-                      {stars}
-                    </p>
-                  ) : null}
-                  {item.review ? <p>{item.review}</p> : null}
-                  {date ? <p className="review-date">{date}</p> : null}
-                  {user ? (
-                    <button
-                      type="button"
-                      className="review-delete"
-                      disabled={deletingId === item._id}
-                      onClick={() => handleDeleteReview(item._id)}
-                    >
-                      {deletingId === item._id ? 'Deleting...' : 'Delete'}
-                    </button>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
-
-        {user ? (
-          <div className="review-form-section">
-            <h3>Write a review</h3>
-            <form className="form" onSubmit={handleReviewSubmit}>
-              <label>
-                Rating
-                <select
-                  name="rating"
-                  value={rating}
-                  onChange={(event) => setRating(event.target.value)}
-                >
-                  <option value="">Select rating</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                </select>
-              </label>
-              <label>
-                Review
-                <textarea
-                  name="review"
-                  value={reviewText}
-                  onChange={(event) => setReviewText(event.target.value)}
-                />
-              </label>
-              {formError ? <p className="error">{formError}</p> : null}
-              {formSuccess ? <p className="success">{formSuccess}</p> : null}
-              <button type="submit" disabled={submitting}>
-                {submitting ? 'Submitting...' : 'Submit Review'}
-              </button>
-            </form>
-          </div>
-        ) : (
-          <p className="review-form-section">
-            <Link to="/login">Log in</Link> to write a review.
-          </p>
-        )}
-      </section>
-
-      <section className="booking-section">
-        <h2>Book This Tour</h2>
-        {user ? (
-          <form className="form" onSubmit={handleBookTour}>
-            {tour && tour.price != null ? (
-              <p>Price: ${tour.price}</p>
-            ) : null}
-            {bookingError ? <p className="error">{bookingError}</p> : null}
-            {bookingSuccess ? (
-              <p className="success">
-                {bookingSuccess} <Link to="/bookings">View your bookings</Link>
+        <>
+          <article className="tour-details">
+            <header className="tour-details-header">
+              <h1>{tour.name}</h1>
+              {tour.summary ? <p>{tour.summary}</p> : null}
+              <p className="tour-details-meta">
+                {tour.price != null ? <strong>${tour.price}</strong> : null}
+                {headerStars ? ` · ${headerStars}` : null}
+                {tour.ratingAverage != null ? ` · Average ${tour.ratingAverage}` : null}
+                {tour.rating != null ? ` · Rating ${tour.rating}` : null}
+                {tour.duration != null ? ` · ${tour.duration} days` : null}
+                {tour.difficulty ? ` · ${tour.difficulty}` : null}
               </p>
+            </header>
+
+            {images.length > 0 ? (
+              <div className="tour-details-images">
+                {images.map((src) => (
+                  <img key={src} src={src} alt="" />
+                ))}
+              </div>
             ) : null}
-            <button type="submit" disabled={bookingSubmitting}>
-              {bookingSubmitting ? 'Booking...' : 'Book Tour'}
-            </button>
-          </form>
-        ) : (
-          <p>
-            <Link to="/login">Log in</Link> to book this tour.
-          </p>
-        )}
-      </section>
+
+            {tour.description ? (
+              <section className="tour-details-section">
+                <h2>Overview</h2>
+                <p>{tour.description}</p>
+              </section>
+            ) : null}
+
+            {startLine ? (
+              <section className="tour-details-section">
+                <h2>Start location</h2>
+                <p>{startLine}</p>
+              </section>
+            ) : null}
+
+            {extraLocations.length > 0 ? (
+              <section className="tour-details-section">
+                <h2>Locations</h2>
+                <ol>
+                  {extraLocations.map((line, index) => (
+                    <li key={`${line}-${index}`}>{line}</li>
+                  ))}
+                </ol>
+              </section>
+            ) : null}
+
+            {startDates.length > 0 ? (
+              <section className="tour-details-section">
+                <h2>Start dates</h2>
+                <ul>
+                  {startDates.map((value) => (
+                    <li key={String(value)}>{formatDate(value)}</li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {guides.length > 0 ? (
+              <section className="tour-details-section">
+                <h2>Guides</h2>
+                <ul className="guide-list">
+                  {guides.map((guide, index) => {
+                    const name =
+                      typeof guide === 'object' ? guide.name : null;
+                    const role =
+                      typeof guide === 'object' ? guide.role : null;
+                    const photo =
+                      typeof guide === 'object' && isHttpUrl(guide.photo)
+                        ? guide.photo
+                        : null;
+                    const key =
+                      (typeof guide === 'object' && (guide._id || guide.id)) ||
+                      index;
+                    return (
+                      <li key={key} className="guide-card">
+                        {photo ? <img src={photo} alt="" width="48" height="48" /> : null}
+                        <p>
+                          {name || 'Guide'}
+                          {role ? ` · ${role}` : null}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ) : null}
+          </article>
+
+          <section className="reviews">
+            <h2>
+              Reviews
+              {reviewCount != null ? ` (${reviewCount})` : null}
+            </h2>
+            {reviewsLoading ? <p className="status">Loading reviews...</p> : null}
+            {reviewsError ? <p className="error">{reviewsError}</p> : null}
+            {deleteError ? <p className="error">{deleteError}</p> : null}
+            {deleteSuccess ? <p className="success">{deleteSuccess}</p> : null}
+            {!reviewsLoading && !reviewsError && reviews.length === 0 ? (
+              <p>No reviews yet. Be the first to review this tour.</p>
+            ) : null}
+            {!reviewsLoading && !reviewsError && reviews.length > 0 ? (
+              <ul className="review-list">
+                {reviews.map((item) => {
+                  const name = reviewerName(item.user);
+                  const stars = starLabel(item.rating);
+                  const date = item.createdAt ? formatDate(item.createdAt) : null;
+                  const showDelete = canDeleteReview(item, user);
+                  return (
+                    <li key={item._id} className="review-card">
+                      {name ? <p className="review-author">{name}</p> : null}
+                      {stars ? (
+                        <p
+                          className="review-rating"
+                          aria-label={`Rating ${item.rating} of 5`}
+                        >
+                          {stars}
+                        </p>
+                      ) : null}
+                      {item.review ? <p>{item.review}</p> : null}
+                      {date ? <p className="review-date">{date}</p> : null}
+                      {showDelete ? (
+                        <button
+                          type="button"
+                          className="review-delete"
+                          disabled={deletingId === item._id}
+                          onClick={() => handleDeleteReview(item._id)}
+                        >
+                          {deletingId === item._id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+
+            {authLoading ? null : user ? (
+              <div className="review-form-section">
+                <h3>Write a review</h3>
+                <form className="form" onSubmit={handleReviewSubmit}>
+                  <label>
+                    Rating
+                    <select
+                      name="rating"
+                      value={rating}
+                      onChange={(event) => setRating(event.target.value)}
+                      disabled={submitting}
+                    >
+                      <option value="">Select rating</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                      <option value="5">5</option>
+                    </select>
+                  </label>
+                  <label>
+                    Review
+                    <textarea
+                      name="review"
+                      value={reviewText}
+                      onChange={(event) => setReviewText(event.target.value)}
+                      disabled={submitting}
+                    />
+                  </label>
+                  {formError ? <p className="error">{formError}</p> : null}
+                  {formSuccess ? <p className="success">{formSuccess}</p> : null}
+                  <button type="submit" disabled={submitting}>
+                    {submitting ? 'Submitting...' : 'Submit Review'}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <p className="review-form-section">
+                <Link to="/login">Log in</Link> to write a review.
+              </p>
+            )}
+          </section>
+
+          <section className="booking-section">
+            <h2>Book This Tour</h2>
+            {authLoading ? null : user ? (
+              <form className="form" onSubmit={handleBookTour}>
+                {tour.price != null ? <p>Price: ${tour.price}</p> : null}
+                {bookingError ? <p className="error">{bookingError}</p> : null}
+                {bookingSuccess ? (
+                  <p className="success">
+                    {bookingSuccess} <Link to="/bookings">View your bookings</Link>
+                  </p>
+                ) : null}
+                <button type="submit" disabled={bookingSubmitting}>
+                  {bookingSubmitting ? 'Booking...' : 'Book Tour'}
+                </button>
+              </form>
+            ) : (
+              <p>
+                <Link to="/login">Log in</Link> to book this tour.
+              </p>
+            )}
+          </section>
+        </>
+      ) : null}
     </main>
   );
 }

@@ -2,7 +2,7 @@ import { apiRequest } from './api';
 
 const DEFAULT_PAGE_SIZE = 6;
 
-export function getTours({ minPrice, maxPrice, sort, page, limit }) {
+export function getTours({ minPrice, maxPrice, minRating, sort, page, limit }) {
   const search = new URLSearchParams();
 
   if (minPrice) {
@@ -10,6 +10,9 @@ export function getTours({ minPrice, maxPrice, sort, page, limit }) {
   }
   if (maxPrice) {
     search.set('price[lte]', String(maxPrice));
+  }
+  if (minRating) {
+    search.set('ratingAverage[gte]', String(minRating));
   }
   if (sort) {
     search.set('sort', sort);
@@ -33,7 +36,7 @@ export function getTourStats() {
 }
 
 export function getTopCheapTours() {
-  return apiRequest('/api/tour/top-5-cheap');
+  return getTours({ sort: 'price', page: 1, limit: 5 });
 }
 
 export function getToursWithin({ distance, lat, lng, unit }) {

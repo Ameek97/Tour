@@ -145,6 +145,46 @@ a {
   padding-left: 1.2rem;
 }
 
+.tour-details-header p {
+  margin: 0.4rem 0;
+}
+
+.tour-details-meta {
+  margin: 0.5rem 0 0;
+  color: #444;
+}
+
+.tour-details-section {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  margin: 1rem 0;
+}
+
+.tour-details-section h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+}
+
+.tour-details-section p {
+  margin: 0.35rem 0;
+}
+
+.tour-details-section ol,
+.tour-details-section ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.guide-card {
+  margin: 0.5rem 0;
+}
+
+.guide-card p {
+  margin: 0.15rem 0;
+}
+
 .tour-card-image {
   width: 100%;
   height: 10rem;
@@ -389,6 +429,25 @@ a {
   object-fit: cover;
   border-radius: 6px;
   margin-bottom: 0.75rem;
+}
+
+.account-danger {
+  border-color: #c9a0a0;
+}
+
+.danger-button {
+  padding: 0.6rem 0.85rem;
+  font: inherit;
+  background: #a40000;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.danger-button:disabled {
+  opacity: 0.7;
+  cursor: default;
 }
 
 .table-wrap {

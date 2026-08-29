@@ -106,8 +106,16 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
+  async function refreshUser() {
+    const current = await loadCurrentUser();
+    setUser(current);
+    return current;
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, error, setError, login, signup, logout }}>
+    <AuthContext.Provider
+      value={{ user, loading, error, setError, login, signup, logout, refreshUser }}
+    >
       {children}
     </AuthContext.Provider>
   );
