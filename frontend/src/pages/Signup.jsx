@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Signup() {
-  const { user, signup } = useAuth();
+  const { user, signup, loading } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -11,6 +11,10 @@ export default function Signup() {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  if (loading) {
+    return <p className="status">Loading...</p>;
+  }
 
   if (user) {
     return <Navigate to="/tours" replace />;

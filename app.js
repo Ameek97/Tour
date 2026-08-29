@@ -23,18 +23,17 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.set('query parser', 'extended'); 
 
-// setting rate limit
-
-const limiter= rateLimit({
-  // how many reqs allowed
-  max: 100,
-  // in how much time (in millisecond)
-  windowMs: 60*60*1000,
-  message:"Too many requests from this IP, try again in an hour."
-});
-
-// specify this limiter is to be used for what api
-app.use('/api', limiter);
+// Rate limiting is for production only. Local development must not
+// return 429 during repeated testing.
+const isProduction = String(process.env.NODE_ENV || '').trim() === 'production';
+if (isProduction) {
+  const limiter = rateLimit({
+    max: 100,
+    windowMs: 60 * 60 * 1000,
+    message: 'Too many requests from this IP, try again in an hour.'
+  });
+  app.use('/api', limiter);
+}
 
 // route middlewear
 app.use("/api/tour",tourRouter);

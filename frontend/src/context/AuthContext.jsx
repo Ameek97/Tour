@@ -1,12 +1,73 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import * as authService from '../services/authService';
+import { getCurrentUser } from '../services/userService';
 
 const AuthContext = createContext(null);
 
+function userFromMeResponse(data) {
+  const raw = data?.data?.user;
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const user = {};
+  if (raw.id != null) {
+    user.id = raw.id;
+  }
+  if (raw.name != null) {
+    user.name = raw.name;
+  }
+  if (raw.email != null) {
+    user.email = raw.email;
+  }
+  if (raw.role != null) {
+    user.role = raw.role;
+  }
+  if (raw.photo != null) {
+    user.photo = raw.photo;
+  }
+
+  return Object.keys(user).length ? user : null;
+}
+
+async function loadCurrentUser({ skipUnauthorizedEvent } = {}) {
+  const data = await getCurrentUser(
+    skipUnauthorizedEvent ? { skipUnauthorizedEvent: true } : {}
+  );
+  return userFromMeResponse(data);
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrate() {
+      setLoading(true);
+      try {
+        const current = await loadCurrentUser({ skipUnauthorizedEvent: true });
+        if (!cancelled) {
+          setUser(current);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setUser(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     function onUnauthorized() {
@@ -18,29 +79,21 @@ export function AuthProvider({ children }) {
 
   async function login(email, password) {
     setError('');
-    setLoading(true);
-    try {
-      await authService.login({ email, password });
-      setUser({ email });
-    } finally {
-      setLoading(false);
-    }
+    await authService.login({ email, password });
+    const current = await loadCurrentUser();
+    setUser(current);
   }
 
   async function signup(form) {
     setError('');
-    setLoading(true);
-    try {
-      await authService.signup({
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        passwordConfirm: form.passwordConfirm
-      });
-      setUser({ name: form.name, email: form.email });
-    } finally {
-      setLoading(false);
-    }
+    await authService.signup({
+      name: form.name,
+      email: form.email,
+      password: form.password,
+      passwordConfirm: form.passwordConfirm
+    });
+    const current = await loadCurrentUser();
+    setUser(current);
   }
 
   async function logout() {

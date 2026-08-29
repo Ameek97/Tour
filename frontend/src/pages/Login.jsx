@@ -3,12 +3,16 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const { user, login } = useAuth();
+  const { user, login, loading } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  if (loading) {
+    return <p className="status">Loading...</p>;
+  }
 
   if (user) {
     return <Navigate to="/tours" replace />;
@@ -63,6 +67,9 @@ export default function Login() {
           {submitting ? 'Logging in...' : 'Login'}
         </button>
       </form>
+      <p>
+        <Link to="/forgot-password">Forgot password?</Link>
+      </p>
       <p>
         Need an account? <Link to="/signup">Sign up</Link>
       </p>

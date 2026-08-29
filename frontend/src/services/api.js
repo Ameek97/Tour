@@ -1,7 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export async function apiRequest(path, options = {}) {
-  const { method = 'GET', body, headers } = options;
+  const { method = 'GET', body, headers, skipUnauthorizedEvent = false } = options;
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
@@ -21,7 +21,7 @@ export async function apiRequest(path, options = {}) {
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 && !skipUnauthorizedEvent) {
       window.dispatchEvent(new Event('auth:unauthorized'));
     }
     const error = new Error(data.message || 'Request failed');

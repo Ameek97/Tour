@@ -9,6 +9,9 @@ const getBookingOwnerId = booking => {
   return booking.user.toString();
 };
 
+const isDevelopmentEnv = () =>
+  String(process.env.NODE_ENV || '').trim() === 'development';
+
 exports.createBooking = async (req, res, next) => {
   try {
     if (!req.body || !req.body.tour) {
@@ -23,6 +26,27 @@ exports.createBooking = async (req, res, next) => {
     const amountPaise = Math.round(Number(tour.price) * 100);
     if (!Number.isFinite(amountPaise) || amountPaise <= 0) {
       return next(new AppError('Tour does not have a valid price', 400));
+    }
+
+    // Development-only: skip Razorpay so bookings can be stored and listed.
+    // Production continues to create a Razorpay order before Booking.create.
+    if (isDevelopmentEnv()) {
+      const createdDev = await Booking.create({
+        user: req.user.id,
+        tour: tour._id,
+        price: tour.price,
+        status: 'confirmed',
+        paymentStatus: 'pending'
+      });
+
+      const bookingDev = await Booking.findById(createdDev._id);
+
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          booking: bookingDev
+        }
+      });
     }
 
     let order;
