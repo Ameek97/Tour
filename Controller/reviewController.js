@@ -19,16 +19,28 @@ exports.postReview=async (req,res, next)=>{
 try{
 req.body = req.body || {};
 
-const tourId= req.params.tourId || req.body.tour;
+const tourId= req.params.tourId || (req.body && req.body.tour);
 
-if(tourId){
+if(!tourId){
+  return next(new AppError('Please provide a tour',400));
+}
+
   const tour= await Tour.findById(tourId);
   if(!tour){return next(new AppError('no document with such id was found',404));}
+
+const text= req.body && req.body.review != null ? String(req.body.review).trim() : '';
+if(!text){
+  return next(new AppError('You must enter a review.',400));
+}
+
+const rating= Number(req.body && req.body.rating);
+if(!Number.isFinite(rating) || rating < 1 || rating > 5){
+  return next(new AppError('Rating must be a number between 1 and 5',400));
 }
 
 const review= await Review.create({
-  review: req.body.review,
-  rating: req.body.rating,
+  review: text,
+  rating,
   user: req.user.id,
   tour: tourId
 });
@@ -88,8 +100,18 @@ exports.updateReview= async (req,res,next)=>{
     }
 
     const update={};
-    if(req.body.review !== undefined){update.review=req.body.review;}
-    if(req.body.rating !== undefined){update.rating=req.body.rating;}
+    if(req.body && req.body.review !== undefined){
+      const text= String(req.body.review).trim();
+      if(!text){return next(new AppError('You must enter a review.',400));}
+      update.review=text;
+    }
+    if(req.body && req.body.rating !== undefined){
+      const rating= Number(req.body.rating);
+      if(!Number.isFinite(rating) || rating < 1 || rating > 5){
+        return next(new AppError('Rating must be a number between 1 and 5',400));
+      }
+      update.rating=rating;
+    }
 
     const review= await Review.findByIdAndUpdate(req.params.id, update, {
       new:true,

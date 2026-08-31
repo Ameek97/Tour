@@ -4,7 +4,7 @@ const AppError = require('./../appError');
 exports.getAllUsers=async (req,res,next)=>{
 
   try{
-   const users= await User.find();
+   const users= await User.find().select('name email role photo');
    
     res. status(200).json({
         status:"Success",

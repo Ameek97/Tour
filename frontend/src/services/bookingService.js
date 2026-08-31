@@ -7,6 +7,17 @@ export function createBooking(tourId) {
   });
 }
 
+export function verifyPayment({ razorpay_order_id, razorpay_payment_id, razorpay_signature }) {
+  return apiRequest('/api/booking/verify-payment', {
+    method: 'POST',
+    body: {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature
+    }
+  });
+}
+
 export function getMyBookings() {
   return apiRequest('/api/booking/my-bookings');
 }
@@ -20,6 +31,10 @@ export function updateBookingStatus(id, status) {
     method: 'PATCH',
     body: { status }
   });
+}
+
+export function getBooking(id) {
+  return apiRequest(`/api/booking/${id}`);
 }
 
 export function deleteBooking(id) {

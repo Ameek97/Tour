@@ -4,13 +4,12 @@ constructor(query, querystring){
    this.query=query;
    this.querystring=querystring;}
 
-  //filter 1 -> (remove the excluded fields) 
   filter(){
-      
     let queryObj={...this.querystring}
     const excludedField=[`sort`,`limit`,`page`,`fields`] 
     excludedField.forEach(el => {delete queryObj[el]});
-    
+
+    queryObj = stripDollarKeys(queryObj);
     
    let querySTR = JSON.stringify(queryObj);
    querySTR=querySTR.replace(/\b(gte|gt|lte|lt)\b/g, match=> `$${match}`)
@@ -20,40 +19,77 @@ constructor(query, querystring){
     return this;
   }
 
-  //sort
   sort(){
     if(this.querystring.sort){
-    const sortby= this.querystring.sort.split(',').join(` `);
-    this.query=this.query.sort(sortby);
-  
+      const fields = String(this.querystring.sort)
+        .split(',')
+        .map(part => part.trim())
+        .filter(Boolean);
+      const allowed = fields.every(field => /^-?[a-zA-Z][a-zA-Z0-9]*$/.test(field));
+      if (allowed && fields.length) {
+        this.query=this.query.sort(fields.join(' '));
+      }
   } 
   
     return this;
   }
   
-  // field limit
   limitFields(){
   if(this.querystring.fields){
-  const f= this.querystring.fields.split(`,`).join(` `);
-  this.query = this.query.select(f);
+    const fields = String(this.querystring.fields)
+      .split(',')
+      .map(part => part.trim())
+      .filter(Boolean);
+    const blocked = fields.some(field =>
+      field.includes('$') ||
+      field.includes('.') ||
+      /password/i.test(field)
+    );
+    if (!blocked && fields.length) {
+      this.query = this.query.select(fields.join(' '));
+    }
   } 
 
     return this;
   }
 
-  //paginate
     paginate() {
-  const page = Number(this.querystring.page) || 1;
-  const limit = Number(this.querystring.limit) || 10;
+  let page = Number(this.querystring.page);
+  let limit = Number(this.querystring.limit);
+
+  if (!Number.isFinite(page) || page < 1) {
+    page = 1;
+  }
+  if (!Number.isFinite(limit) || limit < 1) {
+    limit = 10;
+  }
+  if (limit > 50) {
+    limit = 50;
+  }
 
   const skip = (page - 1) * limit;
-
- if(this.querystring.page){ 
-  this.query = this.query.skip(skip).limit(limit);}
+  this.query = this.query.skip(skip).limit(limit);
 
   return this;
 }
 
+}
+
+function stripDollarKeys(value) {
+  if (Array.isArray(value)) {
+    return value.map(stripDollarKeys);
+  }
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+  const cleaned = {};
+  Object.keys(value).forEach(key => {
+    if (!key || key.startsWith('$') || key.includes('.')) {
+      return;
+    }
+    cleaned[key] = stripDollarKeys(value[key]);
+  });
+  return cleaned;
 }
 
 module.exports= APIfeatures

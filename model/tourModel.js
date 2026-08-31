@@ -1,15 +1,25 @@
 const mongoose = require('mongoose');
+require('../Utils/loadEnv');
 const User= require(`.//userModel`);
+const { isProduction } = require('../Utils/env');
 
-const DB = process.env.DATABASE.replace('<db_password>', process.env.PASSWORD);
+if (!process.env.DATABASE) {
+  console.error('DATABASE environment variable is not set');
+  process.exit(1);
+}
 
+const DB = process.env.DATABASE.replace('<db_password>', process.env.PASSWORD || '');
 
 mongoose.connect(DB)
     .then(() => {
         console.log('Connection to MongoDB successful ✅');
     })
-    .catch(err => {
-        console.error('Connection error:', err.message);
+    .catch(() => {
+        console.error('MongoDB connection failed');
+        if (!isProduction()) {
+          console.error('Check DATABASE and PASSWORD environment variables.');
+        }
+        process.exit(1);
     });
 
 const tourSchema= new mongoose.Schema({
@@ -101,11 +111,9 @@ tourSchema.virtual(`virtualField`).get(function(){
     return `this is veirtual field`;
 });
 
-
-// *****  *****
- tourSchema.virtual('reviews', {
-  ref: 'Review',  // model name of the child 
-  foreignField: 'tour', // actual name of the parent field given in the review model
+tourSchema.virtual('reviews', {
+  ref: 'Review',
+  foreignField: 'tour',
   localField: '_id'
 });
 
@@ -132,15 +140,6 @@ tourSchema.pre(/^find/, function(){
 //     console.log('PRE');
     
 // });
-
-// tourSchema.post('save', function(doc){
-//     console.log('POST');
-// });
-
-tourSchema.virtual(`save`,function(doc,next){
-    console.log("saved");
-
-})
 
 // query middlewear
 tourSchema.pre(`find`,function(){

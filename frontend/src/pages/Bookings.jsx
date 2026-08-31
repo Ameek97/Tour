@@ -1,25 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getMyBookings } from '../services/bookingService';
-
-function formatBookedOn(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-  return date.toLocaleDateString(undefined, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
-}
-
-function httpCover(src) {
-  if (src && String(src).startsWith('http')) {
-    return src;
-  }
-  return null;
-}
+import {
+  bookingTour,
+  formatBookingDate,
+  formatStatusLabel,
+  httpCover
+} from '../utils/bookingDisplay';
 
 export default function Bookings() {
   const [bookings, setBookings] = useState([]);
@@ -62,16 +49,16 @@ export default function Bookings() {
       {error ? <p className="error">{error}</p> : null}
       {!loading && !error && bookings.length === 0 ? (
         <p>
-          You haven&apos;t booked any tours yet.{' '}
-          <Link to="/tours">Explore Tours</Link>
+          You have no bookings yet. Explore available tours.{' '}
+          <Link to="/tours">Explore tours</Link>
         </p>
       ) : null}
       {!loading && !error && bookings.length > 0 ? (
         <ul className="booking-list">
           {bookings.map((booking) => {
-            const tour = booking.tour && typeof booking.tour === 'object' ? booking.tour : null;
+            const tour = bookingTour(booking);
             const cover = tour ? httpCover(tour.imageCover) : null;
-            const bookedOn = booking.createdAt ? formatBookedOn(booking.createdAt) : null;
+            const bookedOn = booking.createdAt ? formatBookingDate(booking.createdAt) : null;
             return (
               <li key={booking._id} className="booking-card">
                 {cover ? <img className="booking-card-image" src={cover} alt="" /> : null}
@@ -79,19 +66,19 @@ export default function Bookings() {
                   {tour?.name ? <h2>{tour.name}</h2> : null}
                   {tour?.summary ? <p>{tour.summary}</p> : null}
                   {booking.price != null ? <p>Price: ${booking.price}</p> : null}
-                  {booking.status ? <p>Booking status: {booking.status}</p> : null}
+                  {booking.status ? (
+                    <p>Booking: {formatStatusLabel(booking.status)}</p>
+                  ) : null}
                   {booking.paymentStatus ? (
-                    <p>Payment status: {booking.paymentStatus}</p>
+                    <p>Payment: {formatStatusLabel(booking.paymentStatus)}</p>
+                  ) : null}
+                  {booking.paymentStatus === 'pending' && booking.status !== 'cancelled' ? (
+                    <p>Payment is not complete until it is confirmed by the server.</p>
                   ) : null}
                   {bookedOn ? <p>Booked on: {bookedOn}</p> : null}
-                  {Array.isArray(tour?.startDates) && tour.startDates.length > 0 ? (
-                    <p>
-                      Start dates:{' '}
-                      {tour.startDates
-                        .map((value) => formatBookedOn(value) || String(value))
-                        .join(', ')}
-                    </p>
-                  ) : null}
+                  <p>
+                    <Link to={`/bookings/${booking._id}`}>View details</Link>
+                  </p>
                 </div>
               </li>
             );

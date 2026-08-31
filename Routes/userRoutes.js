@@ -18,7 +18,11 @@ router.patch('/updateMe', authController.protect, userController.updateMe);
 
 router 
   .route('/')
-  .get(userController.getAllUsers);
+  .get(
+    authController.protect,
+    authController.restrictTo('admin'),
+    userController.getAllUsers
+  );
 
 
 module.exports = router;

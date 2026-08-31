@@ -9,8 +9,25 @@
   box-sizing: border-box;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
+  min-width: 0;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+h1,
+h2,
+h3 {
+  overflow-wrap: anywhere;
 }
 
 a {
@@ -21,14 +38,39 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.85rem max(1rem, env(safe-area-inset-right)) 0.85rem max(1rem, env(safe-area-inset-left));
   background: #fff;
   border-bottom: 1px solid #ddd;
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
-.nav nav {
+.nav-toggle {
+  display: none;
+  font: inherit;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.85rem;
+  background: #fff;
+  color: #0b6b4f;
+  border: 1px solid #0b6b4f;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.nav-links {
   display: flex;
   gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.nav-links a,
+.nav-links .link-button {
+  min-height: 2.75rem;
+  display: inline-flex;
   align-items: center;
 }
 
@@ -53,8 +95,9 @@ a {
 
 .page {
   max-width: 32rem;
-  margin: 2rem auto;
-  padding: 0 1rem;
+  margin: 1.25rem auto 2rem;
+  padding: 0 max(1rem, env(safe-area-inset-right)) 2rem max(1rem, env(safe-area-inset-left));
+  min-width: 0;
 }
 
 .page-wide {
@@ -77,13 +120,23 @@ a {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  min-width: 0;
+  flex: 1 1 10rem;
 }
 
 .tour-filters input,
-.tour-filters select,
+.tour-filters select {
+  font: inherit;
+  padding: 0.55rem 0.65rem;
+  min-height: 2.75rem;
+  width: 100%;
+  max-width: 100%;
+}
+
 .tour-filters button {
   font: inherit;
-  padding: 0.45rem 0.55rem;
+  padding: 0.55rem 0.85rem;
+  min-height: 2.75rem;
 }
 
 .tour-filters button {
@@ -111,7 +164,7 @@ a {
 
 .tour-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
   gap: 1rem;
 }
 
@@ -136,7 +189,7 @@ a {
 }
 
 .tour-details-images img {
-  max-width: 20rem;
+  max-width: min(20rem, 100%);
   width: 100%;
   height: auto;
 }
@@ -209,7 +262,8 @@ a {
 
 .pagination {
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
   align-items: center;
   justify-content: center;
   margin: 1.5rem 0;
@@ -217,7 +271,8 @@ a {
 
 .pagination button {
   font: inherit;
-  padding: 0.45rem 0.75rem;
+  padding: 0.55rem 0.85rem;
+  min-height: 2.75rem;
   cursor: pointer;
 }
 
@@ -245,8 +300,12 @@ a {
 .form input,
 .form select,
 .form textarea {
-  padding: 0.5rem 0.6rem;
+  padding: 0.55rem 0.65rem;
   font: inherit;
+  font-size: 1rem;
+  width: 100%;
+  max-width: 100%;
+  min-height: 2.75rem;
 }
 
 .form textarea {
@@ -255,13 +314,18 @@ a {
 }
 
 .form button {
-  padding: 0.6rem;
+  padding: 0.7rem;
   font: inherit;
+  min-height: 2.75rem;
   background: #0b6b4f;
   color: #fff;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+}
+
+.form-status {
+  margin: 0;
 }
 
 .form button:disabled {
@@ -452,6 +516,7 @@ a {
 
 .table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 6px;
@@ -459,6 +524,7 @@ a {
 
 .management-table {
   width: 100%;
+  min-width: 36rem;
   border-collapse: collapse;
   font-size: 0.95rem;
 }
@@ -477,14 +543,66 @@ a {
 
 .management-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.6rem;
 }
 
 .management-actions button {
   font: inherit;
-  padding: 0.3rem 0.55rem;
+  padding: 0.45rem 0.65rem;
+  min-height: 2.5rem;
   cursor: pointer;
+}
+
+@media (max-width: 48rem) {
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    margin-left: auto;
+  }
+
+  .nav-links {
+    display: none;
+    flex-basis: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    border-top: 1px solid #eee;
+    padding-top: 0.5rem;
+  }
+
+  .nav-links.is-open {
+    display: flex;
+  }
+
+  .nav-links a,
+  .nav-links .link-button {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0.65rem 0.15rem;
+    border-bottom: 1px solid #f0f0f0;
+    text-decoration: none;
+  }
+
+  .tour-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tour-filters label,
+  .tour-filters button {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page {
+    margin-top: 1rem;
+  }
 }
 
 .secondary-form-button {

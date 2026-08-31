@@ -1,6 +1,4 @@
-const path = require('path');
-const dotenv = require('dotenv');
-dotenv.config({ path: path.join(__dirname, '..', 'config.env') });
+require('./loadEnv');
 
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
@@ -12,18 +10,44 @@ const razorpay = new Razorpay({
 
 exports.createRazorpayOrder = options => razorpay.orders.create(options);
 
-exports.verifyRazorpaySignature = (orderId, paymentId, signature) => {
-  const expected = crypto
-    .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-    .update(`${orderId}|${paymentId}`)
-    .digest('hex');
-
+function timingSafeHexEqual(expectedHex, actual) {
+  if (!expectedHex || !actual) {
+    return false;
+  }
   try {
-    return crypto.timingSafeEqual(
-      Buffer.from(expected, 'utf8'),
-      Buffer.from(signature, 'utf8')
-    );
+    const expectedBuf = Buffer.from(String(expectedHex), 'utf8');
+    const actualBuf = Buffer.from(String(actual), 'utf8');
+    if (expectedBuf.length !== actualBuf.length) {
+      return false;
+    }
+    return crypto.timingSafeEqual(expectedBuf, actualBuf);
   } catch (err) {
     return false;
   }
+}
+
+exports.verifyRazorpaySignature = (orderId, paymentId, signature) => {
+  const secret = process.env.RAZORPAY_KEY_SECRET;
+  if (!secret) {
+    return false;
+  }
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(`${orderId}|${paymentId}`)
+    .digest('hex');
+
+  return timingSafeHexEqual(expected, signature);
+};
+
+exports.verifyWebhookSignature = (rawBody, signature) => {
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!secret || !signature || rawBody == null) {
+    return false;
+  }
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(rawBody)
+    .digest('hex');
+
+  return timingSafeHexEqual(expected, signature);
 };

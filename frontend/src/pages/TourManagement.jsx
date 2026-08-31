@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   deleteBooking,
@@ -37,6 +38,11 @@ const EMPTY_FORM = {
 const OBJECT_ID = /^[a-fA-F0-9]{24}$/;
 const LIST_LIMIT = 12;
 const BOOKING_STATUSES = ['pending', 'confirmed', 'cancelled'];
+const BOOKING_STATUS_LABELS = {
+  pending: 'Pending',
+  confirmed: 'Confirmed',
+  cancelled: 'Cancelled'
+};
 
 function parseNumber(raw, label) {
   const text = String(raw).trim();
@@ -478,7 +484,11 @@ export default function TourManagement() {
   }
 
   async function handleDeleteBooking(bookingId) {
-    if (!window.confirm('Delete this booking? This cannot be undone.')) {
+    if (
+      !window.confirm(
+        'Permanently delete this booking? This cannot be undone. This is not a cancellation.'
+      )
+    ) {
       return;
     }
     setBookingActionError('');
@@ -693,8 +703,8 @@ export default function TourManagement() {
                   <th>User</th>
                   <th>Email</th>
                   <th>Price</th>
-                  <th>Status</th>
-                  <th>Payment</th>
+                  <th>Booking status</th>
+                  <th>Payment status</th>
                   <th>Booked</th>
                   <th>Actions</th>
                 </tr>
@@ -725,12 +735,20 @@ export default function TourManagement() {
                       >
                         {BOOKING_STATUSES.map((status) => (
                           <option key={status} value={status}>
-                            {status}
+                            {BOOKING_STATUS_LABELS[status]}
                           </option>
                         ))}
                       </select>
                     </td>
-                    <td>{booking.paymentStatus || '—'}</td>
+                    <td>
+                      {booking.paymentStatus === 'pending'
+                        ? 'Pending'
+                        : booking.paymentStatus === 'paid'
+                          ? 'Paid'
+                          : booking.paymentStatus === 'failed'
+                            ? 'Failed'
+                            : booking.paymentStatus || '—'}
+                    </td>
                     <td>{booking.createdAt ? formatWhen(booking.createdAt) : '—'}</td>
                     <td>
                       <div className="management-actions">
@@ -748,6 +766,7 @@ export default function TourManagement() {
                             ? 'Updating...'
                             : 'Update Status'}
                         </button>
+                        <Link to={`/bookings/${booking._id}`}>Details</Link>
                         <button
                           type="button"
                           className="review-delete"
@@ -756,7 +775,7 @@ export default function TourManagement() {
                         >
                           {deletingBookingId === booking._id
                             ? 'Deleting...'
-                            : 'Delete Booking'}
+                            : 'Delete booking'}
                         </button>
                       </div>
                     </td>

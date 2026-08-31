@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import ProtectedRoute from '../components/ProtectedRoute';
+import BookingDetail from '../pages/BookingDetail';
 import Bookings from '../pages/Bookings';
 import ForgotPassword from '../pages/ForgotPassword';
 import Home from '../pages/Home';
@@ -57,6 +58,14 @@ export default function AppRoutes() {
           element={
             <ProtectedRoute>
               <Bookings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/bookings/:id"
+          element={
+            <ProtectedRoute>
+              <BookingDetail />
             </ProtectedRoute>
           }
         />

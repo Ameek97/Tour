@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { createBooking } from '../services/bookingService';
+import { createBooking, verifyPayment } from '../services/bookingService';
+import { loadRazorpayScript, openRazorpayCheckout } from '../services/razorpayCheckout';
 import { createReview, deleteReview, getReviewsByTour } from '../services/reviewService';
 import { getTourById } from '../services/tourService';
 
@@ -136,6 +137,7 @@ export default function TourDetails() {
   const [bookingError, setBookingError] = useState('');
   const [bookingSuccess, setBookingSuccess] = useState('');
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [bookingPhase, setBookingPhase] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -279,16 +281,51 @@ export default function TourDetails() {
 
   async function handleBookTour(event) {
     event.preventDefault();
+    if (bookingSubmitting) {
+      return;
+    }
     setBookingError('');
     setBookingSuccess('');
     setBookingSubmitting(true);
+    setBookingPhase('Creating booking...');
     try {
-      await createBooking(id);
-      setBookingSuccess('Tour booked successfully.');
+      const data = await createBooking(id);
+      const checkout = data.data?.razorpay;
+      if (!checkout) {
+        setBookingSuccess('Tour booked successfully.');
+        setBookingPhase('');
+        return;
+      }
+
+      setBookingPhase('Opening payment...');
+      await loadRazorpayScript();
+      const payment = await openRazorpayCheckout({
+        keyId: checkout.keyId,
+        orderId: checkout.orderId,
+        amount: checkout.amount,
+        currency: checkout.currency,
+        description: tour?.name ? `Booking: ${tour.name}` : 'Tour booking',
+        name: user?.name,
+        email: user?.email
+      });
+
+      setBookingPhase('Processing payment...');
+      const verified = await verifyPayment({
+        razorpay_order_id: payment.razorpay_order_id,
+        razorpay_payment_id: payment.razorpay_payment_id,
+        razorpay_signature: payment.razorpay_signature
+      });
+      const paid = verified.data?.booking;
+      if (paid && paid.paymentStatus === 'paid') {
+        setBookingSuccess('Payment successful.');
+      } else {
+        setBookingError('Payment could not be confirmed. Check My Bookings for the current status.');
+      }
     } catch (err) {
       setBookingError(err.message || 'Unable to book this tour.');
     } finally {
       setBookingSubmitting(false);
+      setBookingPhase('');
     }
   }
 
@@ -300,6 +337,9 @@ export default function TourDetails() {
   const guides = Array.isArray(tour?.guides) ? tour.guides : [];
   const startDates = Array.isArray(tour?.startDates) ? tour.startDates : [];
   const headerStars = tour ? starLabel(tour.ratingAverage ?? tour.rating) : null;
+  const alreadyBooked =
+    Boolean(bookingSuccess) ||
+    (bookingError && bookingError.toLowerCase().includes('already have a booking'));
 
   return (
     <main className="page page-wide">
@@ -497,14 +537,33 @@ export default function TourDetails() {
             {authLoading ? null : user ? (
               <form className="form" onSubmit={handleBookTour}>
                 {tour.price != null ? <p>Price: ${tour.price}</p> : null}
-                {bookingError ? <p className="error">{bookingError}</p> : null}
+                {bookingSubmitting && bookingPhase ? (
+                  <p className="form-status">{bookingPhase}</p>
+                ) : null}
+                {bookingError ? (
+                  <p className="error">
+                    {bookingError}
+                    {bookingError.toLowerCase().includes('already have a booking') ||
+                    bookingError.toLowerCase().includes('still unpaid') ? (
+                      <>
+                        {' '}
+                        <Link to="/bookings">View your bookings</Link>
+                      </>
+                    ) : null}
+                  </p>
+                ) : null}
                 {bookingSuccess ? (
                   <p className="success">
                     {bookingSuccess} <Link to="/bookings">View your bookings</Link>
                   </p>
                 ) : null}
-                <button type="submit" disabled={bookingSubmitting}>
-                  {bookingSubmitting ? 'Booking...' : 'Book Tour'}
+                <button
+                  type="submit"
+                  disabled={bookingSubmitting || alreadyBooked}
+                >
+                  {bookingSubmitting
+                    ? bookingPhase || 'Booking...'
+                    : 'Book Tour'}
                 </button>
               </form>
             ) : (

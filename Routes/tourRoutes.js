@@ -26,11 +26,13 @@ Router.get(
 
 Router.get(
   '/tours-within/:distance/center/:latlng/unit/:unit',
+  authController.protect,
   tourController.getToursWithin
 );
 
 Router.get(
   '/distances/:latlng/unit/:unit',
+  authController.protect,
   tourController.getDistances
 );
 

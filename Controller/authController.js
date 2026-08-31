@@ -3,38 +3,44 @@ const jwt= require(`jsonwebtoken`);
 const AppError = require('./../appError');
 const {promisify}= require('util');
 const sendMail= require(`./../sendEmail`);
-const bcrypt= require(`bcryptjs`);
 const crypto= require('crypto');
+const { isProduction } = require('../Utils/env');
 
 
 const createToken = id=>{
     return jwt.sign({ id },
         process.env.JWT_KEY,
-        { expiresIn: process.env.JWT_EXP,
+        { expiresIn: process.env.JWT_EXP || '90d',
           
          })
 }
 
-const createSendToken = (user, statusCode, res) => {
-  const token = createToken(user._id);
-
-  const cookieOptions = {
-    expires: new Date(
-      Date.now() + process.env.COOKIE_EXP * 24 * 60 * 60 * 1000
-    ),
-    httpOnly: true
+const cookieOptions = () => {
+  const days = Number(process.env.COOKIE_EXP);
+  const expireDays = Number.isFinite(days) && days > 0 ? days : 90;
+  const options = {
+    expires: new Date(Date.now() + expireDays * 24 * 60 * 60 * 1000),
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/'
   };
 
-  if (process.env.NODE_ENV === "production") {
-    cookieOptions.secure = true;
+  if (isProduction()) {
+    options.secure = true;
+    if (process.env.FRONTEND_ORIGIN) {
+      options.sameSite = 'none';
+    }
   }
 
-   // sends a cookie
-  res.cookie("jwt", token, cookieOptions);
+  return options;
+};
+
+const createSendToken = (user, statusCode, res) => {
+  const token = createToken(user._id);
+  res.cookie('jwt', token, cookieOptions());
 
   res.status(statusCode).json({
-    status: "success",
-    token
+    status: 'success'
   });
 };
 
@@ -43,7 +49,10 @@ exports.signup= async (req,res,next)=>{
 
     try{
      const newUser = await User.create({
-        ...req.body,
+        name: req.body && req.body.name,
+        email: req.body && req.body.email,
+        password: req.body && req.body.password,
+        passwordConfirm: req.body && req.body.passwordConfirm,
         role: 'user'
      });
 
@@ -81,8 +90,7 @@ catch(err){next(err);}
 
 
 exports.protect= async (req,res, next)=>{
-
-// 1)check if the token was sent
+try{
 let token; 
 
 if(req.headers.authorization  && req.headers.authorization.startsWith("Bearer")){
@@ -94,42 +102,28 @@ if(req.headers.authorization  && req.headers.authorization.startsWith("Bearer"))
   }
 }
 
-// if no token was sent
 if(!token || token==='loggedout'){return next(new AppError("Request denied you were not logged in",401));}
 
-
-// 2) verify the token
-
- // verifies the token and as we promisify, it returns the token json
  const decoded=await promisify(jwt.verify)(token,process.env.JWT_KEY);
-
- console.log(decoded);
-
- // 3) check if the user still exists
 
    const newUser= await User.findById(decoded.id);
 
    if(!newUser){return next(new AppError("The user this token belongs to no longer exists.",401));}
 
-
- // 4) check if the password was changed after the token was issued
-
-  // model instance function 
   if(newUser.changedPasswordAfter(decoded.iat)){
    return next(new AppError("The password was changed after the token was issued, please login again.",401));}
 
-req.user=newUser; // just the token may have been provided, req.user could have been nothing 
-
-// if next was reached means that token was authorised
+req.user=newUser;
 next();
-
+} catch(err){
+  return next(err);
 }
+};
 
 exports.logout= (req,res)=>{
-  res.cookie('jwt','loggedout',{
-    expires: new Date(Date.now()+10*1000),
-    httpOnly: true
-  });
+  const options = cookieOptions();
+  options.expires = new Date(Date.now() + 10 * 1000);
+  res.cookie('jwt', 'loggedout', options);
 
   res.status(200).json({
     status:'success'
@@ -175,22 +169,22 @@ try{
 exports.forgotPassword= async (req,res, next)=>{
 
  try{ 
-// check if email was sent
-if(!req.body.email){return next(new AppError("provide an email",401));}
+if(!req.body || !req.body.email){return next(new AppError("provide an email",400));}
 
-// 1) check if the email sent by the user exists
 const user= await User.findOne({email:req.body.email});
+const generic = {
+  status: 'success',
+  message: 'If that email exists, a reset message has been sent.'
+};
 
-if(!user){return next(new AppError("No such email exists"));}
+if(!user){
+  return res.status(200).json(generic);
+}
 
-//2) Generate a reset token
 const resetToken= user.createPasswordResetToken();
-
-// the token would have gotten updated in db, but not saved
  await user.save({validateBeforeSave:false});
 
- // we set the url/route of the reset password function
-  const url=`${req.protocol}://${req.get('host')}/api/user/resetPassword/${resetToken}`;
+  const url=`${req.protocol}://${req.get('host')}/reset-password/${resetToken}`;
 
  const message= `Want to reset your password? Click on the link ${url} to reset, else 
   ignore this email.`;
@@ -204,17 +198,14 @@ await sendMail({
           subject,
           message});
 
- res.status(200)
-    .json({
-      status:"success",
-      message:"an email has been to send to your email address to reset the password"
-    })         
+ res.status(200).json(generic);
 } catch(err){
 
   user.passwordResetToken=undefined;
   user.passwordTokenExpire=undefined;
-  await user.save({validateBeforeSave:false}); 
-  return next(new AppError(err.message,500) );
+  await user.save({validateBeforeSave:false});
+  console.error('Reset email failed');
+  return res.status(200).json(generic);
 }
 
 
@@ -277,19 +268,13 @@ exports.updatePassword=async (req, res, next)=>{
   if(!user){return next(new AppError("No user with such email exists",404));}
 
   if(!(await user.correctPassword(req.body.passwordCurrent, user.password))){
-        return next(new AppError("Your password is incorrect"));}
+        return next(new AppError("Your password is incorrect", 401));}
         
    user.password= req.body.password;     
    user.passwordConfirm= req.body.passwordConfirm;     
    await user.save();
    
-   const token = createToken(user._id);
-
-   res
-      .status(200)
-      .json({
-        status:"success",
-        token
-      })   } catch(err){return next(err);}
+   createSendToken(user, 200, res);
+   } catch(err){return next(err);}
 
 }

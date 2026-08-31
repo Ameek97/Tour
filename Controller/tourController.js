@@ -4,6 +4,7 @@ const handlerFactory=require('./handlerFactory');
 const AppError= require('../appError');
 const processTourImage= require('../Utils/processTourImage');
 const {uploadImageBuffer}= require('../Utils/cloudinary');
+const { stripOperatorKeys } = require('../Utils/sanitize');
 
 exports.getAllTours= async(req,res,next)=>{
 try{
@@ -201,7 +202,8 @@ exports.getToursWithin= async (req,res,next)=>{
           spherical:true,
           key:'startLocation'
         }
-      }
+      },
+      { $limit: 50 }
     ]);
 
     res
@@ -235,7 +237,8 @@ exports.getDistances= async (req,res,next)=>{
           spherical:true,
           key:'startLocation'
         }
-      }
+      },
+      { $limit: 50 }
     ]);
 
     res
@@ -252,7 +255,7 @@ exports.getDistances= async (req,res,next)=>{
 
 exports.postTour= async (req,res,next)=>{
 try{
-const newTour= await Tour.create(req.body);
+const newTour= await Tour.create(stripOperatorKeys(req.body || {}));
 res
   .status(200)
   .json({
@@ -289,7 +292,10 @@ exports.updateTour= async (req,res,next)=>{
   try{
     if(req.body && req.body._id){delete req.body._id;}
 
-    const tour= await Tour.findByIdAndUpdate(req.params.id, req.body, {
+    const tour= await Tour.findByIdAndUpdate(
+      req.params.id,
+      stripOperatorKeys(req.body || {}),
+      {
       new:true,
       runValidators:true
     });
@@ -389,11 +395,13 @@ res
 */
 
 exports.deleteAllTours=async (req,res,next)=>{
-  
-await Tour.deleteMany({});
- return res.status(200).json({
+  try{
+    await Tour.deleteMany({});
+    return res.status(200).json({
       status:"success"});
-
+  } catch(err){
+    return next(err);
+  }
 }
 
 
